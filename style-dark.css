@@ -52,3 +52,34 @@ input[type="number"], input[type="text"] {
 .score-table th { text-align: left; color: var(--accent); border-bottom: 1px solid #334155; padding: 10px; }
 .score-table td { padding: 12px 10px; border-bottom: 1px solid #334155; }
 .current-turn { background: rgba(59, 130, 246, 0.2); }
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; top: 0; 
+    width: 100%; height: 100%; 
+    background-color: rgba(0,0,0,0.8);
+    backdrop-filter: blur(3px);
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 10% auto; 
+    padding: 20px; 
+    border-radius: 20px; 
+    width: 85%; 
+    max-width: 450px;
+    border: 1px solid var(--accent);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    color: var(--text);
+}
+
+.modal-content h3 { 
+    margin-top: 0; 
+    color: var(--accent); 
+    text-align: center; 
+    border-bottom: 1px solid #334155;
+    padding-bottom: 10px;
+}
+
+.modal-content b { color: var(--accent); }
