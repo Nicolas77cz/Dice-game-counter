@@ -5,25 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kostky PRO</title>
     <link rel="manifest" href="manifest.json">
-<link id="themeLink" rel="stylesheet" href="style-dark.css">
-
+    <link id="themeLink" rel="stylesheet" href="style-dark.css">
 </head>
 <body>
 
 <div class="container">
     <h2 style="text-align: center; color: var(--accent);">🎲 KOSTKY PRO</h2>
-<div style="text-align: right; margin-bottom: 10px; display: flex; justify-content: flex-end; gap: 5px;">
-    <button class="secondary history-btn" onclick="openRules()">📖 Pravidla</button>
-    <button class="secondary history-btn" onclick="toggleTheme()" id="themeBtn">☀️ Světlý režim</button>
-</div>
+    
+    <div style="text-align: right; margin-bottom: 10px; display: flex; justify-content: flex-end; gap: 5px;">
+        <button class="secondary history-btn" onclick="openRules()">📖 Pravidla</button>
+        <button class="secondary history-btn" onclick="toggleTheme()" id="themeBtn">☀️ Světlý režim</button>
+    </div>
+
     <div class="card input-zone" id="playPanel" style="display:none;">
         <div class="active-player-name" id="currentPlayerDisplay">Na řadě: -</div>
         <input type="number" id="mainInput" placeholder="Zadej hod (min 350)" inputmode="numeric">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-    <button onclick="submitTurn()">Zapsat body</button>
-    <button class="secondary" onclick="submitZero()">Zapsat KIKS</button> <button class="danger secondary history-btn" onclick="undoLastMove()">↩ Krok zpět</button>
-    <button class="secondary history-btn" onclick="nextPlayer()">Přeskočit</button>
-</div>
+            <button onclick="submitTurn()">Zapsat body</button>
+            <button class="secondary" onclick="submitZero()">Zapsat KIKS</button> 
+            <button class="danger secondary history-btn" onclick="undoLastMove()">↩ Krok zpět</button>
+            <button class="secondary history-btn" onclick="nextPlayer()">Přeskočit</button>
+        </div>
     </div>
 
     <div class="card">
@@ -37,7 +39,8 @@
     <div class="card">
         <table class="score-table">
             <thead>
-    <tr><th>Hráč</th><th>Body</th><th>Kiksy</th></tr> </thead>
+                <tr><th>Hráč</th><th>Body</th><th>Kiksy</th></tr> 
+            </thead>
             <tbody id="scoreBody"></tbody>
         </table>
         <div style="margin-top: 15px; display: flex; gap: 5px;">
@@ -47,33 +50,51 @@
     </div>
 </div>
 
+<div id="rulesModal" class="modal" onclick="closeRules()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>Pravidla hry Kostky (10 000)</h3>
+        <div style="max-height: 70vh; overflow-y: auto; text-align: left; font-size: 0.9rem;">
+            <b>Průběh hry:</b>
+            <ul>
+                <li>Pokud po hodu nepadne žádná bodovaná kostka, nastává <b>KIKS</b> (0 bodů v tomto kole).</li>
+                <li>Hráč musí v jednom kole naházet alespoň <b>350 bodů</b> pro zápis.</li>
+                <li>Pokud hráč boduje všemi 6 kostkami, může pokračovat v házení (body se sčítají).</li>
+                <li><b>Trestná série:</b> Pokud hráč 3x po sobě nezapíše žádné body (hodí <b>KIKS</b> nebo nahlásí méně než 350), jeho <b>celkové skóre se vynuluje</b>.</li>
+                <li>Vítězí hráč, který jako první dosáhne <b>10 000 bodů</b>.</li>
+            </ul>
+        </div>
+        <button class="btn-add" style="width:100%; margin-top: 15px;" onclick="closeRules()">Rozumím, jdeme hrát!</button>
+    </div>
+</div>
+
 <script>
+    // --- LOGIKA TÉMATU ---
     function toggleTheme() {
-    vibrate();
-    const themeLink = document.getElementById('themeLink');
-    const themeBtn = document.getElementById('themeBtn');
-    
-    if (themeLink.getAttribute('href') === 'style-dark.css') {
-        themeLink.setAttribute('href', 'style-light.css');
-        themeBtn.innerText = "🌙 Tmavý režim";
-        localStorage.setItem('diceTheme', 'light');
-    } else {
-        themeLink.setAttribute('href', 'style-dark.css');
-        themeBtn.innerText = "☀️ Světlý režim";
-        localStorage.setItem('diceTheme', 'dark');
+        vibrate();
+        const themeLink = document.getElementById('themeLink');
+        const themeBtn = document.getElementById('themeBtn');
+        
+        if (themeLink.getAttribute('href') === 'style-dark.css') {
+            themeLink.setAttribute('href', 'style-light.css');
+            themeBtn.innerText = "🌙 Tmavý režim";
+            localStorage.setItem('diceTheme', 'light');
+        } else {
+            themeLink.setAttribute('href', 'style-dark.css');
+            themeBtn.innerText = "☀️ Světlý režim";
+            localStorage.setItem('diceTheme', 'dark');
+        }
     }
-}
 
-// Načtení uloženého tématu při startu
-const savedTheme = localStorage.getItem('diceTheme');
-if (savedTheme === 'light') {
-    document.getElementById('themeLink').setAttribute('href', 'style-light.css');
-    document.getElementById('themeBtn').innerText = "🌙 Tmavý režim";
-}
+    const savedTheme = localStorage.getItem('diceTheme');
+    if (savedTheme === 'light') {
+        document.getElementById('themeLink').setAttribute('href', 'style-light.css');
+        document.getElementById('themeBtn').innerText = "🌙 Tmavý režim";
+    }
 
+    // --- LOGIKA HRY ---
     let players = JSON.parse(localStorage.getItem('dice_players')) || [];
     let activeIndex = 0;
-    let history = []; // Pro krok zpět
+    let history = [];
 
     function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
 
@@ -111,7 +132,6 @@ if (savedTheme === 'light') {
         const input = document.getElementById('mainInput');
         const val = parseInt(input.value);
         if (isNaN(val) || val < 350) { alert("Minimum je 350!"); return; }
-        
         processMove(val);
         input.value = "";
     }
@@ -124,19 +144,17 @@ if (savedTheme === 'light') {
         
         const p = activeOnes[activeIndex];
         
-        // Uložit do historie pro "Krok zpět"
         history.push(JSON.parse(JSON.stringify(players)));
         if (history.length > 10) history.shift();
 
         vibrate();
 
         if (points === 0) {
-    p.zeros++;
-    if (p.zeros >= 3) {
-        alert("3x KIKS v řadě! Hráč " + p.name + " přichází o všechny body."); // Stylová hláška
-        p.score = 0; p.zeros = 0;
-    }
-}
+            p.zeros++;
+            if (p.zeros >= 3) {
+                alert("3x KIKS v řadě! Hráč " + p.name + " přichází o všechny body.");
+                p.score = 0; p.zeros = 0;
+            }
         } else {
             p.zeros = 0;
             let target = p.score + points;
@@ -159,7 +177,6 @@ if (savedTheme === 'light') {
     function undoLastMove() {
         if (history.length > 0) {
             players = history.pop();
-            // Vrátit index o jednoho zpět
             const activeOnes = players.filter(p => p.active);
             activeIndex = (activeIndex - 1 + activeOnes.length) % activeOnes.length;
             vibrate();
@@ -181,14 +198,12 @@ if (savedTheme === 'light') {
         const body = document.getElementById('scoreBody');
         const activeOnes = players.filter(p => p.active);
         
-        // Knihovna
         lib.innerHTML = players.map(p => `
             <div class="library-item ${p.active ? 'active' : ''}" onclick="toggleActive(${p.id})">
                 ${p.name}
             </div>
         `).join('');
 
-        // Tabulka a Aktivní panel
         body.innerHTML = "";
         document.getElementById('playPanel').style.display = activeOnes.length ? 'block' : 'none';
 
@@ -209,35 +224,21 @@ if (savedTheme === 'light') {
         });
     }
 
-    // Registrace Service Workeru
+    function openRules() {
+        vibrate();
+        document.getElementById('rulesModal').style.display = 'block';
+    }
+
+    function closeRules() {
+        document.getElementById('rulesModal').style.display = 'none';
+    }
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
     }
-    function openRules() {
-    vibrate();
-    document.getElementById('rulesModal').style.display = 'block';
-}
 
-function closeRules() {
-    document.getElementById('rulesModal').style.display = 'none';
-}
+    render(); // Prvotní vykreslení
 </script>
-<div id="rulesModal" class="modal" onclick="closeRules()">
-    <div id="rulesModal" class="modal" onclick="closeRules()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>Pravidla hry Kostky (10 000)</h3>
-        <div style="max-height: 70vh; overflow-y: auto; text-align: left; font-size: 0.9rem;">
-            <b>Průběh hry:</b>
-            <ul>
-                <li>Pokud po hodu nepadne žádná bodovaná kostka, nastává <b>KIKS</b> (0 bodů v tomto kole).</li>
-                <li>Pokud hráč boduje všemi 6 kostkami, může pokračovat v házení (body se sčítají).</li>
-                <li><b>Trestná série:</b> Pokud hráč 3x po sobě nezapíše žádné body (hodí <b>KIKS</b> nebo nahlásí méně než 350), jeho <b>celkové skóre se vynuluje</b>.</li>
-                <li>Vítězí hráč, který jako první dosáhne <b>10 000 bodů</b> (případně s přesným dohozem).</li>
-            </ul>
-        </div>
-        <button class="btn-add" style="width:100%; margin-top: 15px;" onclick="closeRules()">Rozumím, jdeme hrát!</button>
-    </div>
-    </div>
-</div>
+
 </body>
 </html>
