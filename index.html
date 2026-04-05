@@ -15,16 +15,18 @@
 <div style="text-align: right; margin-bottom: 10px;">
     <button class="secondary history-btn" onclick="toggleTheme()" id="themeBtn">☀️ Světlý režim</button>
 </div>
-
+<div style="text-align: right; margin-bottom: 10px; display: flex; justify-content: flex-end; gap: 5px;">
+    <button class="secondary history-btn" onclick="openRules()">📖 Pravidla</button>
+    <button class="secondary history-btn" onclick="toggleTheme()" id="themeBtn">☀️ Světlý režim</button>
+</div>
     <div class="card input-zone" id="playPanel" style="display:none;">
         <div class="active-player-name" id="currentPlayerDisplay">Na řadě: -</div>
         <input type="number" id="mainInput" placeholder="Zadej hod (min 350)" inputmode="numeric">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button onclick="submitTurn()">Zapsat body</button>
-            <button class="secondary" onclick="submitZero()">Zapsat 0</button>
-            <button class="danger secondary history-btn" onclick="undoLastMove()">↩ Krok zpět</button>
-            <button class="secondary history-btn" onclick="nextPlayer()">Přeskočit hráče</button>
-        </div>
+    <button onclick="submitTurn()">Zapsat body</button>
+    <button class="secondary" onclick="submitZero()">Zapsat KIKS</button> <button class="danger secondary history-btn" onclick="undoLastMove()">↩ Krok zpět</button>
+    <button class="secondary history-btn" onclick="nextPlayer()">Přeskočit</button>
+</div>
     </div>
 
     <div class="card">
@@ -38,8 +40,7 @@
     <div class="card">
         <table class="score-table">
             <thead>
-                <tr><th>Hráč</th><th>Body</th><th>Nuly</th></tr>
-            </thead>
+    <tr><th>Hráč</th><th>Body</th><th>Kiksy</th></tr> </thead>
             <tbody id="scoreBody"></tbody>
         </table>
         <div style="margin-top: 15px; display: flex; gap: 5px;">
@@ -133,11 +134,12 @@ if (savedTheme === 'light') {
         vibrate();
 
         if (points === 0) {
-            p.zeros++;
-            if (p.zeros >= 3) {
-                alert(p.name + " má 3 nuly! Skóre jde na 0.");
-                p.score = 0; p.zeros = 0;
-            }
+    p.zeros++;
+    if (p.zeros >= 3) {
+        alert("3x KIKS v řadě! Hráč " + p.name + " přichází o všechny body."); // Stylová hláška
+        p.score = 0; p.zeros = 0;
+    }
+}
         } else {
             p.zeros = 0;
             let target = p.score + points;
@@ -214,7 +216,31 @@ if (savedTheme === 'light') {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
     }
-</script>
+    function openRules() {
+    vibrate();
+    document.getElementById('rulesModal').style.display = 'block';
+}
 
+function closeRules() {
+    document.getElementById('rulesModal').style.display = 'none';
+}
+</script>
+<div id="rulesModal" class="modal" onclick="closeRules()">
+    <div id="rulesModal" class="modal" onclick="closeRules()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>Pravidla hry Kostky (10 000)</h3>
+        <div style="max-height: 70vh; overflow-y: auto; text-align: left; font-size: 0.9rem;">
+            <b>Průběh hry:</b>
+            <ul>
+                <li>Pokud po hodu nepadne žádná bodovaná kostka, nastává <b>KIKS</b> (0 bodů v tomto kole).</li>
+                <li>Pokud hráč boduje všemi 6 kostkami, může pokračovat v házení (body se sčítají).</li>
+                <li><b>Trestná série:</b> Pokud hráč 3x po sobě nezapíše žádné body (hodí <b>KIKS</b> nebo nahlásí méně než 350), jeho <b>celkové skóre se vynuluje</b>.</li>
+                <li>Vítězí hráč, který jako první dosáhne <b>10 000 bodů</b> (případně s přesným dohozem).</li>
+            </ul>
+        </div>
+        <button class="btn-add" style="width:100%; margin-top: 15px;" onclick="closeRules()">Rozumím, jdeme hrát!</button>
+    </div>
+    </div>
+</div>
 </body>
 </html>
