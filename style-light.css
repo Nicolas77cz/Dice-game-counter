@@ -1,0 +1,54 @@
+:root {
+    --bg: #f1f5f9;
+    --card-bg: #ffffff;
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --accent: #3b82f6;
+    --text: #1e293b;
+    --danger: #dc2626;
+}
+
+/* Zbytek kódu je identický jako v dark verzi, CSS proměnné se postarají o zbytek */
+body { 
+    font-family: 'Segoe UI', Roboto, sans-serif; 
+    background: var(--bg); color: var(--text); 
+    margin: 0; padding: 15px;
+    display: flex; flex-direction: column; align-items: center;
+}
+
+.container { max-width: 500px; width: 100%; }
+
+button {
+    padding: 12px 20px; border: none; border-radius: 10px;
+    font-weight: bold; cursor: pointer; color: white;
+    transition: all 0.1s; box-shadow: 0 4px 0 var(--primary-dark);
+    background: var(--primary); text-transform: uppercase; font-size: 0.9rem;
+}
+
+button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--primary-dark); }
+button.secondary { background: #cbd5e1; color: #1e293b; box-shadow: 0 4px 0 #94a3b8; }
+button.danger { background: var(--danger); box-shadow: 0 4px 0 #991b1b; }
+
+.card { 
+    background: var(--card-bg); padding: 20px; border-radius: 15px; 
+    margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.active-player-name { color: var(--accent); font-size: 1.4rem; margin-bottom: 10px; font-weight: bold; }
+
+input[type="number"], input[type="text"] {
+    padding: 12px; border-radius: 10px; border: 2px solid #cbd5e1; 
+    background: #f8fafc; color: #1e293b; text-align: center;
+}
+
+.library-item {
+    display: inline-block; padding: 8px 15px; margin: 4px;
+    background: #e2e8f0; border-radius: 20px; font-size: 0.8rem; cursor: pointer;
+}
+.library-item.active { background: var(--primary); color: white; }
+
+.score-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.score-table th { text-align: left; color: var(--accent); border-bottom: 2px solid #e2e8f0; padding: 10px; }
+.score-table td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; }
+.current-turn { background: rgba(59, 130, 246, 0.1); }
