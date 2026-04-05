@@ -1,0 +1,231 @@
+﻿<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kostky - Profi Počítadlo</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: sans-serif; background: #f0f4f8; margin: 0; padding: 10px; color: #333; }
+        h1, h2 { text-align: center; color: #2c3e50; }
+        
+        .card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Knihovna hráčů */
+        .player-library { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .library-item { 
+            background: #e1e8ed; padding: 8px 12px; border-radius: 20px; 
+            display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+            cursor: pointer; transition: 0.2s;
+        }
+        .library-item.active { background: #27ae60; color: white; }
+        
+        /* Herní plocha */
+        .game-area { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .player-card { background: #fff; border-left: 5px solid #27ae60; }
+        .player-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .score { font-size: 1.8rem; font-weight: bold; color: #27ae60; }
+        
+        /* Ovládací prvky */
+        .controls { display: flex; gap: 5px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+        button { padding: 10px 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-main { background: #2980b9; color: white; width: 100%; margin-top: 10px; }
+        .btn-add { background: #27ae60; color: white; }
+        .btn-zero { background: #e74c3c; color: white; }
+        .btn-reset { background: #95a5a6; color: white; margin-top: 20px; width: 100%; }
+
+        .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <h1>Kostky</h1>
+
+    <div class="card">
+        <h2>Knihovna hráčů</h2>
+        <div class="settings-row">
+            <span>Kliknutím zapnete/vypnete hráče v této hře:</span>
+        </div>
+        <div id="playerLibrary" class="player-library"></div>
+        
+        <div style="margin-top: 15px; display: flex; gap: 5px;">
+            <input type="text" id="newPlayerName" placeholder="Nové jméno...">
+            <button class="btn-add" onclick="addNewPlayerToLibrary()" style="white-space: nowrap;">+ Přidat</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="settings-row">
+            <label><input type="checkbox" id="exactFinishToggle" onchange="toggleSettings()"> Přesné dohazování (10k)</label>
+            <button class="btn-zero" onclick="resetScoresOnly()" style="padding: 5px 10px; font-size: 0.8rem;">Vynulovat body v této hře</button>
+        </div>
+    </div>
+
+    <div id="gameArea" class="game-area"></div>
+
+    <button class="btn-reset" onclick="fullReset()">Smazat celou paměť (vč. jmen)</button>
+
+    <script>
+        // MASTER DATA: { id, name, score, zeroStreak, isActive }
+        let allPlayers = JSON.parse(localStorage.getItem('diceMasterList')) || [];
+        let isExactMode = JSON.parse(localStorage.getItem('diceExactMode')) || false;
+
+        // Inicializace
+        document.getElementById('exactFinishToggle').checked = isExactMode;
+        renderEverything();
+
+        function renderEverything() {
+            renderLibrary();
+            renderGame();
+            save();
+        }
+
+        // --- KNIHOVNA ---
+        function renderLibrary() {
+            const libContainer = document.getElementById('playerLibrary');
+            libContainer.innerHTML = "";
+            allPlayers.forEach(p => {
+                const div = document.createElement('div');
+                div.className = `library-item ${p.isActive ? 'active' : ''}`;
+                div.innerHTML = `${p.name} ${p.isActive ? '✓' : ''}`;
+                div.onclick = () => togglePlayerActive(p.id);
+                libContainer.appendChild(div);
+            });
+        }
+
+        function addNewPlayerToLibrary() {
+            const input = document.getElementById('newPlayerName');
+            const name = input.value.trim();
+            if (!name) return;
+            
+            allPlayers.push({
+                id: Date.now(),
+                name: name,
+                score: 0,
+                zeroStreak: 0,
+                isActive: true
+            });
+            
+            input.value = "";
+            renderEverything();
+        }
+
+        function togglePlayerActive(id) {
+            const p = allPlayers.find(p => p.id === id);
+            p.isActive = !p.isActive;
+            renderEverything();
+        }
+
+        // --- HRA ---
+        function renderGame() {
+            const gameContainer = document.getElementById('gameArea');
+            gameContainer.innerHTML = "";
+            
+            const activePlayers = allPlayers.filter(p => p.isActive);
+            
+            if (activePlayers.length === 0) {
+                gameContainer.innerHTML = "<p style='text-align:center; color: #7f8c8d;'>Vyberte hráče v knihovně výše...</p>";
+                return;
+            }
+
+            activePlayers.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'card player-card';
+                card.innerHTML = `
+                    <div class="player-info">
+                        <div>
+                            <strong style="font-size:1.2rem;">${p.name}</strong><br>
+                            <span style="color:#e74c3c; font-size:0.8rem;">Nuly: ${p.zeroStreak}/3</span>
+                        </div>
+                        <div class="score">${p.score}</div>
+                    </div>
+                    <div class="controls">
+                        <input type="number" id="in-${p.id}" placeholder="Body (min 350)">
+                        <button class="btn-add" onclick="handleTurn(${p.id}, 'score')">Zapsat</button>
+                        <button class="btn-zero" onclick="handleTurn(${p.id}, 'zero')">0</button>
+                    </div>
+                `;
+                gameContainer.appendChild(card);
+            });
+        }
+
+        function handleTurn(id, type) {
+            const p = allPlayers.find(p => p.id === id);
+            const input = document.getElementById(`in-${id}`);
+            const points = parseInt(input.value);
+
+            if (type === 'zero') {
+                p.zeroStreak++;
+                if (p.zeroStreak >= 3) {
+                    alert(`${p.name} má 3 nuly. Skóre se nuluje!`);
+                    p.score = 0;
+                    p.zeroStreak = 0;
+                }
+            } else {
+                if (isNaN(points) || points < 350) {
+                    alert("Minimum je 350 bodů!");
+                    return;
+                }
+                
+                p.zeroStreak = 0;
+                let newScore = p.score + points;
+
+                if (newScore >= 10000) {
+                    if (isExactMode) {
+                        if (newScore === 10000) {
+                            p.score = 10000;
+                            alert(`VÍTĚZ: ${p.name}!`);
+                        } else {
+                            p.score -= points;
+                            alert(`PŘESTŘELENO! ${points} se odečítá. Nový stav: ${p.score}`);
+                            if (p.score < 0) p.score = 0;
+                        }
+                    } else {
+                        p.score = newScore;
+                        alert(`VÍTĚZ: ${p.name}!`);
+                    }
+                } else {
+                    p.score = newScore;
+                }
+            }
+            
+            input.value = "";
+            renderEverything();
+        }
+
+        // --- POMOCNÉ ---
+        function toggleSettings() {
+            isExactMode = document.getElementById('exactFinishToggle').checked;
+            save();
+        }
+
+        function resetScoresOnly() {
+            if (confirm("Vynulovat body všem aktivním hráčům pro novou hru?")) {
+                allPlayers.forEach(p => {
+                    p.score = 0;
+                    p.zeroStreak = 0;
+                });
+                renderEverything();
+            }
+        }
+
+        function fullReset() {
+            if (confirm("Smazat úplně všechno včetně jmen v knihovně?")) {
+                allPlayers = [];
+                renderEverything();
+            }
+        }
+
+        function save() {
+            localStorage.setItem('diceMasterList', JSON.stringify(allPlayers));
+            localStorage.setItem('diceExactMode', JSON.stringify(isExactMode));
+        }
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('Offline režim je aktivní!'))
+    .catch(err => console.log('Chyba Service Workeru:', err));
+}
+    </script>
+</body>
+</html>
