@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kostky-cache-v1.9';
+const CACHE_NAME = 'kostky-cache-v2';
 const urlsToCache = [
   './',
   './index.html',
