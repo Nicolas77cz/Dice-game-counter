@@ -1,3 +1,4 @@
+alert("Skript se úspěšně načetl!");
 // --- STAV A NASTAVENÍ ---
 let players = JSON.parse(localStorage.getItem('dice_players')) || [];
 let history = [];
