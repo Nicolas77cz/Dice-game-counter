@@ -2,11 +2,11 @@ const CACHE_NAME = 'kostky-cache-v1.7';
 const urlsToCache = [
   './',
   './index.html',
+  './script.js',
   './manifest.json',
   './icon.png',
   './style-dark.css',
   './style-light.css',
-  './script.js',
   './rules.json'
 ];
 
