@@ -163,12 +163,6 @@ function processMove(points) {
     setTimeout(checkBotTurn, 1000);
 }
     
-    vibrate();
-    activeIndex = (activeIndex + 1) % activeOnes.length;
-    save();
-    setTimeout(checkBotTurn, 1000);
-}
-
 function checkBotTurn() {
     const activeOnes = players.filter(p => p.active);
     if (activeOnes.length === 0) return;
