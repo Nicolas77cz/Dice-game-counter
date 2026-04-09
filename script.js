@@ -137,26 +137,30 @@ function processMove(points) {
         }
     } else {
         p.zeros = 0;
-        let target = p.score + points;
+        let potentialScore = p.score + points;
 
-        if (target >= settings.target) {
+        if (potentialScore > settings.target) {
             if (settings.zilch) {
-                if (target === settings.target) { 
-                    p.score = settings.target; 
-                    alert("VÍTĚZ: " + p.name); 
-                } else { 
-                    p.score -= points; 
-                    if(p.score < 0) p.score = 0; 
-                    alert("ZILCH! Přestřeleno, body se odečítají."); 
-                }
-            } else { 
-                p.score = target; 
-                alert("VÍTĚZ: " + p.name); 
+                // LOGIKA ODEČTU: Pokud přehodí, body se odečtou od aktuálního stavu
+                p.score = Math.max(0, p.score - points);
+                alert(`PŘEHOZENO! V režimu ZILCH se ${points} bodů odečítá. Aktuálně: ${p.score}`);
+            } else {
+                // Klasický mód: prostě se nepřičte nic a hráč čeká na další kolo
+                alert("Přehozeno! Bodování se nezapisuje.");
             }
+        } else if (potentialScore === settings.target) {
+            p.score = potentialScore;
+            alert("VÍTĚZSTVÍ! Hráč " + p.name + " dosáhl cíle!");
         } else {
-            p.score = target;
+            p.score = potentialScore;
         }
     }
+    
+    vibrate();
+    activeIndex = (activeIndex + 1) % activeOnes.length;
+    save();
+    setTimeout(checkBotTurn, 1000);
+}
     
     vibrate();
     activeIndex = (activeIndex + 1) % activeOnes.length;
@@ -240,22 +244,37 @@ function resetScores() {
     }
 }
 
-function updateRulesText() {
+async function updateRulesText() {
     const content = document.getElementById('rulesContent');
     if (!content) return;
-    content.innerHTML = `
-        <p>Hraje se se <b>6 kostkami</b>. Po každém hodu se odkládají bodované kostky.</p>
-        <p><b>Důležité limity:</b><br>
-        • Vstup do hry: <b>${settings.entryLimit}</b> bodů.<br>
-        • Zápis v dalších kolech: <b>${settings.turnLimit}</b> bodů.</p>
-        <p><b>Základní hodnoty:</b><br>
-        • 1 = 100 bodů, 5 = 50 bodů.<br>
-        • Trojice: 100x hodnota kostky (3x 1 = 1000).<br>
-        • Čtvrtá a další kostka v trojici hodnotu zdvojnásobuje.</p>
-        <p><b>Kiks:</b> Pokud nehodíte žádnou bodovanou kostku. 3x kiks v řadě = ztráta všech bodů!</p>
-    `;
-}
 
+    try {
+        const response = await fetch('rules.json');
+        const d = await response.json();
+
+        content.innerHTML = `
+            <div style="margin-bottom:15px; border-bottom:1px solid var(--accent); padding-bottom:10px;">
+                <b>Bodování:</b><br>
+                • ${d.scoring.singles}<br>
+                • ${d.scoring.sets}<br>
+                • ${d.scoring.straights}<br>
+                • ${d.scoring.kiks}
+            </div>
+            <div style="margin-bottom:15px;">
+                <b>Vysvětlení limitů:</b><br>
+                • <b>Vstup (${settings.entryLimit}):</b> ${d.limits_info.entry}<br>
+                • <b>Kolo (${settings.turnLimit}):</b> ${d.limits_info.turn}<br>
+                • <b>ZILCH:</b> ${d.limits_info.zilch}
+            </div>
+            <div style="font-size: 0.8rem; opacity: 0.8;">
+                ${d.features.bot}<br>
+                ${d.features.management}
+            </div>
+        `;
+    } catch (e) {
+        content.innerHTML = "Pravidla se nepodařilo načíst.";
+    }
+}
 function toggleTheme() {
     vibrate();
     const themeLink = document.getElementById('themeLink');
