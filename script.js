@@ -201,55 +201,36 @@ function processMove(points) {
 // ==========================================
 // 5. BOT LOGIKA (S INTELIGENCÍ A OSOBNOSTÍ)
 // ==========================================
-function checkBotTurn() {
-    const playing = players.filter(p => p.active && !p.finished);
-    if (playing.length === 0) return;
-
-    const p = playing[activeIndex];
-    if (p && p.isBot) {
-        document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name} (${p.difficulty}) hází...`;
-        setTimeout(() => {
-            const points = simulateBotTurn(p); // Předáme celého bota pro kontrolu stavu
-            if (points === 0) {
-                document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name}: KIKS! (0 bodů)`;
-                setTimeout(() => processMove(0), 1500);
-            } else {
-                processMove(points);
-            }
-        }, 1000);
-    }
-}
-
 function simulateBotTurn(bot) {
     let turnPoints = 0;
     let diceCount = 6;
-    let stop = false;
+    const currentLimit = (bot.score === 0) ? settings.entryLimit : settings.turnLimit;
 
     const diffs = {
         'conservative': { kiksMod: 0.7, riskLimit: 1.1, stopChance: 0.85 },
         'normal':       { kiksMod: 1.0, riskLimit: 1.4, stopChance: 0.65 },
         'crazy':        { kiksMod: 1.4, riskLimit: 2.2, stopChance: 0.35 }
     };
-    
     const d = diffs[bot.difficulty] || diffs['normal'];
-    const currentLimit = (bot.score === 0) ? settings.entryLimit : settings.turnLimit;
 
-    while (!stop) {
-        // --- POJISTKA 3. KIKSU ---
+    // Nekonečná smyčka, dokud bot buď nevyhraje, nezkiksne, nebo se nerozhodne přestat
+    while (true) {
+        // 1. Kontrola paniky ze 3. KIKSU
         if (bot.zeros === 2 && turnPoints >= currentLimit) {
-             return turnPoints; 
+            return turnPoints;
         }
 
-        // --- SIMULACE HODU ---
+        // 2. Výpočet šance na KIKS
         let kiksChance = (diceCount <= 3 ? 0.25 : 0.1) * d.kiksMod;
         if (diceCount === 1) kiksChance = 0.45 * d.kiksMod;
         if (bot.zeros === 2) kiksChance *= 1.5;
 
         if (Math.random() < kiksChance) return 0;
 
-        let roll = Math.random();
+        // 3. Simulace hodu
         let throwGain = 0;
         let usedDice = 0;
+        let roll = Math.random();
 
         if (roll < 0.03) { 
             throwGain = (diceCount === 6) ? 2000 : 1800;
@@ -265,37 +246,38 @@ function simulateBotTurn(bot) {
             throwGain = usedDice * (Math.random() > 0.5 ? 100 : 50);
         }
 
-        // --- ZILCH KONTROLA ---
+        // 4. ZILCH LOGIKA (Pojistka proti přehození)
         if (settings.zilch) {
-            let predictedTotal = bot.score + turnPoints + throwGain;
-            if (predictedTotal > settings.target) {
-                // Pokud už má bot nahráno aspoň limit, raději skončí před tímto hodem
+            if (bot.score + turnPoints + throwGain > settings.target) {
+                // Pokud by tento hod způsobil přehození:
+                // Máme už splněný limit? Pokud ano, končíme s tím, co jsme měli před tímto hodem.
+                // Pokud ne, je to v podstatě KIKS (nemůžeme zapsat nic).
                 return turnPoints >= currentLimit ? turnPoints : 0;
             }
         }
 
+        // Přičtení bodů z aktuálního hodu
         turnPoints += throwGain;
         diceCount -= usedDice;
         if (diceCount <= 0) diceCount = 6;
 
-        // --- ROZHODOVÁNÍ O KONCI (Tady byla chyba) ---
-        // 1. Bot MUSÍ pokračovat, dokud nemá aspoň limit (currentLimit)
+        // 5. ROZHODOVÁNÍ O KONCI TAHU
+        // Bot MUSÍ házet dál, pokud nemá limit
         if (turnPoints < currentLimit) {
-            stop = false; 
-        } 
-        // 2. Pokud má limit splněn, rozhoduje se podle obtížnosti
-        else if (turnPoints >= currentLimit * d.riskLimit) {
-            stop = true;
-        } else {
-            if (Math.random() < d.stopChance || diceCount < 3) stop = true;
+            continue; // Skočí na začátek while a hází znovu
+        }
+
+        // Pokud už má limit, zváží konec podle obtížnosti
+        if (turnPoints >= currentLimit * d.riskLimit) {
+            return turnPoints; // Má nahráno hodně, končí
+        }
+
+        // Náhodné zastavení (stopChance) nebo pokud zbývá málo kostek
+        if (Math.random() < d.stopChance || diceCount < 3) {
+            return turnPoints;
         }
     }
-
-    // FINÁLNÍ POJISTKA: Pokud by nějakou chybou v logice bot vypadl z cyklu pod limitem, 
-    // vrací 0 (bere se to jako by neriskoval a kiksul/nedosáhl limitu).
-    return turnPoints >= currentLimit ? turnPoints : 0;
 }
-
 
 // ==========================================
 // 6. POMOCNÉ FUNKCE A UI
