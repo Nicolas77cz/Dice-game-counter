@@ -431,42 +431,46 @@ function save() {
 }
 function showRollHistory() {
     const content = document.getElementById('rulesContent');
-    if (!content) return;
+    const modal = document.getElementById('rulesModal');
+    if (!content || !modal) return;
 
     let tableHtml = `
-        <h2 style="color:var(--accent); text-align:center;">📜 Historie zápisů</h2>
-        <div style="max-height: 400px; overflow-y: auto;">
-            <table style="width:100%; border-collapse: collapse; color: white;">
-                <thead style="position: sticky; top: 0; background: var(--bg-dark);">
-                    <tr style="border-bottom: 2px solid var(--accent);">
-                        <th style="text-align:left; padding: 8px;">Čas</th>
-                        <th style="text-align:left; padding: 8px;">Hráč</th>
-                        <th style="text-align:right; padding: 8px;">Body</th>
-                        <th style="text-align:right; padding: 8px;">Celkem</th>
+        <h2 style="color:var(--accent); text-align:center; margin-top:0;">📜 Historie hodů</h2>
+        <div style="max-height: 60vh; overflow-y: auto;">
+            <table style="width:100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead style="position: sticky; top: 0; background: #333; color: var(--accent);">
+                    <tr>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Čas</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Hráč</th>
+                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Tah</th>
+                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Celkem</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
 
     [...rollLog].reverse().forEach(log => {
+        const color = log.points === 0 ? '#ff4d4d' : 'white';
         tableHtml += `
             <tr style="border-bottom: 1px solid #444;">
-                <td style="padding: 8px; font-size: 0.8em; color: #aaa;">${log.time}</td>
-                <td style="padding: 8px;">${log.name}</td>
-                <td style="padding: 8px; text-align:right; font-weight:bold; color:${log.points === 0 ? 'red' : 'inherit'}">
-                    ${log.points}
+                <td style="padding: 8px; color: #888;">${log.time}</td>
+                <td style="padding: 8px; font-weight: bold;">${log.name}</td>
+                <td style="padding: 8px; text-align: right; color: ${color}; font-family: monospace;">
+                    ${log.points === 0 ? 'KIKS' : log.points}
                 </td>
-                <td style="padding: 8px; text-align:right; color: #888;">${log.total}</td>
+                <td style="padding: 8px; text-align: right; color: #aaa;">${log.total}</td>
             </tr>
         `;
     });
 
     tableHtml += `</tbody></table></div>`;
     
-    if (rollLog.length === 0) tableHtml = "<p style='text-align:center; color: #aaa;'>Zatím žádné hody.</p>";
-    
+    if (rollLog.length === 0) {
+        tableHtml = "<p style='text-align:center; padding: 20px; color: #888;'>Zatím nebyly zapsány žádné hody.</p>";
+    }
+
     content.innerHTML = tableHtml;
-    openRules();
+    modal.style.display = 'block'; // Otevíráme přímo modal, ne přes openRules()
 }
 function resetScores() {
     players.forEach(p => { p.score = 0; p.zeros = 0; p.finished = false; p.finishTime = null; });
@@ -501,11 +505,20 @@ async function updateRulesText() {
                 <b style="color:var(--accent);">Funkce:</b><br>
                 • ${d.features.bot}<br>• ${d.features.management}
             </div>`;
-    } catch (e) { content.innerHTML = "Pravidla se nepodařilo načíst (zkontrolujte rules.json)."; }
+    } catch (e) { 
+        content.innerHTML = "Pravidla se nepodařilo načíst (zkontrolujte rules.json)."; 
+    }
 }
 
 function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
-function openRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'block'; }
+function openRules() { 
+    const m = document.getElementById('rulesModal'); 
+    if(m) {
+        updateRulesText().then(() => {
+            m.style.display = 'block'; 
+        });
+    } 
+}
 function closeRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'none'; }
 
 // ==========================================
