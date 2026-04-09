@@ -58,11 +58,10 @@ function updateSettings() {
 // ==========================================
 function addNewPlayer(isBot) {
     const nameInput = document.getElementById('newName');
+    const diffSelect = document.getElementById('botDifficultySelect'); // Přidáme do HTML
     const name = nameInput.value.trim();
+    
     if (name) {
-        // Při vytvoření bota mu přidělíme náhodnou nebo fixní obtížnost
-        const difficulty = isBot ? prompt("Zadej obtížnost (conservative/normal/crazy):", "normal") : null;
-        
         players.push({ 
             id: Date.now(), 
             name: name, 
@@ -70,7 +69,7 @@ function addNewPlayer(isBot) {
             zeros: 0, 
             active: true, 
             isBot: isBot,
-            difficulty: difficulty || 'normal', // Uloženo u hráče
+            difficulty: isBot ? diffSelect.value : 'normal', 
             finished: false,
             finishTime: null
         });
@@ -108,6 +107,20 @@ function toggleActive(id) {
     }
 }
 
+function changeBotDifficulty(id) {
+    const p = players.find(p => p.id === id);
+    if (!p || !p.isBot) return;
+
+    const levels = ['conservative', 'normal', 'crazy'];
+    const currentIdx = levels.indexOf(p.difficulty);
+    
+    // Jednoduchý přepínač: každé kliknutí posune obtížnost dál
+    const nextIdx = (currentIdx + 1) % levels.length;
+    p.difficulty = levels[nextIdx];
+    
+    vibrate();
+    save();
+}
 // ==========================================
 // 4. JÁDRO HERNÍ LOGIKY
 // ==========================================
@@ -307,12 +320,15 @@ function render() {
     const playing = players.filter(p => p.active && !p.finished);
     
     lib.innerHTML = players.map(p => `
-        <div class="library-item ${p.active ? 'active' : ''} ${p.finished ? 'finished' : ''}">
-            <span onclick="toggleActive(${p.id})">${p.isBot ? '🤖' : '👤'} ${p.name} (${p.isBot ? p.difficulty : 'Hráč'})</span>
-            <span class="edit-btn" onclick="renamePlayer(${p.id})">✏️</span>
-            <span class="edit-btn" onclick="deletePlayer(${p.id})">🗑️</span>
-        </div>
-    `).join('');
+    <div class="library-item ${p.active ? 'active' : ''} ${p.finished ? 'finished' : ''}">
+        <span onclick="toggleActive(${p.id})">
+            ${p.isBot ? '🤖' : '👤'} ${p.name}
+        </span>
+        ${p.isBot ? `<span class="diff-badge" onclick="changeBotDifficulty(${p.id})">${p.difficulty}</span>` : ''}
+        <span class="edit-btn" onclick="renamePlayer(${p.id})">✏️</span>
+        <span class="edit-btn" onclick="deletePlayer(${p.id})">🗑️</span>
+    </div>
+`).join('');
 
     body.innerHTML = "";
     document.getElementById('playPanel').style.display = playing.length ? 'block' : 'none';
