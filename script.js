@@ -1,4 +1,3 @@
-alert("Skript se úspěšně načetl!");
 // --- STAV A NASTAVENÍ ---
 let players = JSON.parse(localStorage.getItem('dice_players')) || [];
 let history = [];
@@ -163,27 +162,62 @@ function processMove(points) {
     setTimeout(checkBotTurn, 1000);
 }
     
-function checkBotTurn() {
-    const activeOnes = players.filter(p => p.active);
-    if (activeOnes.length === 0) return;
-    
-    const nextP = activeOnes[activeIndex];
-    if (nextP && nextP.isBot) {
-        const currentLimit = (nextP.score === 0) ? settings.entryLimit : settings.turnLimit;
-        let botRoll;
+function simulateBotTurn() {
+    let turnPoints = 0;
+    let diceCount = 6;
+    let stop = false;
 
-        // Inteligentnější simulace hodu BOTa
-        if (Math.random() < 0.18) {
-            botRoll = 0; // Kiks
+    // Definice parametrů podle obtížnosti
+    const diffs = {
+        'conservative': { kiksMod: 0.8, riskLimit: 1.2, stopChance: 0.8 }, // Opatrný (míň kiksá, končí brzo)
+        'normal':       { kiksMod: 1.0, riskLimit: 1.5, stopChance: 0.6 }, // Standardní
+        'crazy':        { kiksMod: 1.3, riskLimit: 2.5, stopChance: 0.3 }  // Blázen (víc kiksá, ale jde po tisících)
+    };
+    
+    const d = diffs[botDifficulty] || diffs['normal'];
+
+    while (!stop) {
+        // 1. ŠANCE NA KIKS (ovlivněna kiksModem)
+        let kiksChance = (diceCount <= 3 ? 0.2 : 0.1) * d.kiksMod;
+        if (diceCount === 1) kiksChance = 0.4 * d.kiksMod;
+
+        if (Math.random() < kiksChance) return 0;
+
+        // 2. SIMULACE HODU (Logika zůstává stejná jako minule)
+        let throwGain = 0;
+        let usedDice = 0;
+        let roll = Math.random();
+
+        if (roll < 0.03) { 
+            throwGain = (diceCount === 6) ? 2000 : 1800;
+            usedDice = diceCount; 
+        } else if (roll < 0.15) {
+            let count = Math.min(diceCount, Math.floor(Math.random() * 4 + 3));
+            let value = Math.floor(Math.random() * 6 + 1);
+            let baseValue = (value === 1) ? 1000 : value * 100;
+            throwGain = baseValue + (baseValue * (count - 3)); 
+            usedDice = count;
         } else {
-            // Hod v násobcích 50, který dává smysl
-            const randomBonus = Math.floor(Math.random() * 8) * 50;
-            botRoll = currentLimit + randomBonus;
+            usedDice = Math.min(diceCount, Math.floor(Math.random() * 2 + 1));
+            throwGain = usedDice * (Math.random() > 0.5 ? 100 : 50);
         }
-        
-        alert(`BOT ${nextP.name} hází: ${botRoll === 0 ? "KIKS" : botRoll}`);
-        processMove(botRoll);
+
+        turnPoints += throwGain;
+        diceCount -= usedDice;
+        if (diceCount <= 0) diceCount = 6;
+
+        // 3. TAKTIKA (Zde se projevuje osobnost)
+        // Bot přestane, pokud překročí limit vynásobený koeficientem rizika
+        if (turnPoints >= settings.turnLimit * d.riskLimit) {
+            stop = true;
+        } else if (turnPoints >= settings.turnLimit) {
+            // Pokud má aspoň základní limit, rozhoduje se náhodně podle stopChance
+            if (Math.random() < d.stopChance || diceCount < 3) {
+                stop = true;
+            }
+        }
     }
+    return turnPoints;
 }
 
 // --- POMOCNÉ FUNKCE ---
