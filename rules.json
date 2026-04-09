@@ -3,16 +3,16 @@
   "scoring": {
     "singles": "1 = 100 bodů, 5 = 50 bodů.",
     "sets": "Trojice = 100x hodnota (3x 2 = 200, 3x 1 = 1000). Každá další kostka (4. až 6.) přičítá hodnotu trojice (např. 4x 2 = 400, 5x 2 = 600, 6x 2 = 800).",
-    "straights": "Postupka 1-6: Z ruky = 2000, dohazovaná = 1800."
-    "kiks": "Nulový hod / kolo. Pokud hráč nezapíše žádné body (nehodí ani limit). 3x kiks vymazání celkového stavu bodů!"
+    "straights": "Postupka 1-6: Z ruky = 2000, dohazovaná = 1800.",
+    "kiks": "Pokud hráč nezapíše žádné body. 3x KIKS v řadě = smazání celého skóre na 0!"
   },
   "limits_info": {
-    "entry": "Vstupní limit: Minimální počet bodů, které musíte získat pro první zápis do tabulky.",
-    "turn": "Limit kola: Minimální počet bodů pro jakýkoliv další zápis v průběhu hry.",
-    "zilch": "ZILCH mód: Vyžaduje dosažení přesně cílových bodů. Pokud cíl překročíte, hod se odečte od vašeho stávajícího skóre."
+    "entry": "Vstupní limit: Body potřebné pro úplně první zápis do hry.",
+    "turn": "Limit kola: Body potřebné pro každý další zápis.",
+    "zilch": "ZILCH mód: Při přetažení cíle se body od celkového stavu odečítají."
   },
   "features": {
-    "bot": "🤖 BOT: Automatický protihráč. Hází podle nastavených limitů s rizikem kiksu.",
-    "management": "Správa hráčů: Kliknutím na jméno hráče v knihovně ho aktivujete/deaktivujete pro hru. Ikony tužky a koše slouží k úpravě jména nebo smazání."
+    "bot": "🤖 BOT: Automatický protihráč hrající na riziko.",
+    "management": "Správa: Kliknutím na jméno aktivujete hráče. Tužka = přejmenovat, Koš = smazat."
   }
 }
