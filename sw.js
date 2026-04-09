@@ -1,9 +1,11 @@
-const CACHE_NAME = 'kostky-cache-v1.4';
+const CACHE_NAME = 'kostky-cache-v1.5';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon.png'
+  './icon.png',
+  './style-dark.css',
+  './style-light.css'
 ];
 
 self.addEventListener('install', event => {
