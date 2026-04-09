@@ -149,7 +149,7 @@ function processMove(points) {
     if (playing.length === 0) return;
     
     const p = playing[activeIndex];
-    logRoll(p.name, points);
+    logRoll(p.name, points, p.score);
     history.push(JSON.parse(JSON.stringify(players)));
 
     if (points === 0) {
@@ -236,14 +236,18 @@ function simulateBotTurn(bot) {
     const d = diffs[bot.difficulty] || diffs['normal'];
 
     while (true) {
+        // Záchranná brzda: Pokud má bot 2 kiksi a už splnil limit, neriskuje pád na nulu
         if (bot.zeros === 2 && turnPoints >= currentLimit) return turnPoints;
 
+        // Výpočet šance na kiks
         let kiksChance = (diceCount <= 3 ? 0.25 : 0.1) * d.kiksMod;
         if (diceCount === 1) kiksChance = 0.45 * d.kiksMod;
         if (bot.zeros === 2) kiksChance *= 1.5;
 
+        // Simulace hodu (kiks)
         if (Math.random() < kiksChance) return 0;
 
+        // Simulace zisku z hodu
         let throwGain = 0;
         let usedDice = 0;
         let roll = Math.random();
@@ -262,20 +266,43 @@ function simulateBotTurn(bot) {
             throwGain = usedDice * (Math.random() > 0.5 ? 100 : 50);
         }
 
-        if (settings.zilch && (bot.score + turnPoints + throwGain > settings.target)) {
-            return turnPoints >= currentLimit ? turnPoints : 0;
+        // --- ZILCH LOGIKA: Strategie "Lepší odepsat než kiks" ---
+        if (settings.zilch) {
+            let potentialTotal = bot.score + turnPoints + throwGain;
+            
+            // Pokud by bot tímto hodem přehodil cíl:
+            if (potentialTotal > settings.target) {
+                // Pokud už má splněný limit kola, okamžitě končí a zapisuje body (aby v příštím kole odepisoval)
+                // Je to lepší než riskovat další hod a přijít o všechno kiks-em.
+                if (turnPoints >= currentLimit) {
+                    return turnPoints;
+                }
+                // Pokud limit ještě nemá, musí riskovat dál nebo vrátit 0 (což je v obou případech špatné)
+            }
+            
+            // Strategické zastavení: Pokud je bot v "cílové rovince" (nad 90 % skóre)
+            // a aktuální nához mu stačí na bezpečné přiblížení, raději přestane.
+            if (potentialTotal > (settings.target * 0.9) && turnPoints >= currentLimit) {
+                return turnPoints;
+            }
+        } else {
+            // Klasická logika bez Zilch (nepřehazovat přes cíl)
+            if (bot.score + turnPoints + throwGain > settings.target) {
+                return turnPoints >= currentLimit ? turnPoints : 0;
+            }
         }
 
+        // Přičtení bodů a aktualizace kostek
         turnPoints += throwGain;
         diceCount -= usedDice;
         if (diceCount <= 0) diceCount = 6;
 
-        if (turnPoints < currentLimit) continue;
-        if (turnPoints >= currentLimit * d.riskLimit) return turnPoints;
-        if (Math.random() < d.stopChance || diceCount < 3) return turnPoints;
+        // Rozhodování o ukončení tahu
+        if (turnPoints < currentLimit) continue; // Musí hrát dál, nemá limit
+        if (turnPoints >= currentLimit * d.riskLimit) return turnPoints; // Má dostatečně zariskováno
+        if (Math.random() < d.stopChance || diceCount < 3) return turnPoints; // Náhodné zastavení podle obtížnosti
     }
 }
-
 // ==========================================
 // 6. TÉMATA
 // ==========================================
@@ -312,13 +339,13 @@ function applySavedTheme() {
 // ==========================================
 // 7. POMOCNÉ FUNKCE A UI
 // ==========================================
-function logRoll(playerName, points) {
+function logRoll(playerName, points, totalScore) {
     rollLog.push({
-        time: new Date().toLocaleTimeString(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         name: playerName,
-        points: points
+        points: points,
+        total: totalScore // Přidáme aktuální celkový stav
     });
-    // Udržíme jen posledních 100 hodů, aby se nezahltila paměť
     if (rollLog.length > 100) rollLog.shift();
     localStorage.setItem('dice_roll_log', JSON.stringify(rollLog));
 }
@@ -415,6 +442,7 @@ function showRollHistory() {
                         <th style="text-align:left; padding: 8px;">Čas</th>
                         <th style="text-align:left; padding: 8px;">Hráč</th>
                         <th style="text-align:right; padding: 8px;">Body</th>
+                        <th style="text-align:right; padding: 8px;">Celkem</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -428,6 +456,7 @@ function showRollHistory() {
                 <td style="padding: 8px; text-align:right; font-weight:bold; color:${log.points === 0 ? 'red' : 'inherit'}">
                     ${log.points}
                 </td>
+                <td style="padding: 8px; text-align:right; color: #888;">${log.total}</td>
             </tr>
         `;
     });
