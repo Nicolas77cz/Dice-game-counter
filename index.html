@@ -67,20 +67,12 @@
                     <option value="10000" selected>10 000</option>
                 </select>
             </div>
-            <div style="grid-column: span 2;">
-                Obtížnost BOTa:
-                <select id="botDiff" onchange="botDifficulty = this.value">
-                    <option value="conservative">Opatrný (Konzerva)</option>
-                    <option value="normal" selected>Normální</option>
-                    <option value="crazy">Hazardér (Blázen)</option>
-                </select>
-            </div>
             <div>
-                Vstup:
+                Limit pro vstup:
                 <input type="number" id="entryLimit" step="50" value="350" onchange="updateSettings()">
             </div>
             <div>
-                Kolo:
+                Limit kola:
                 <input type="number" id="turnLimit" step="50" value="350" onchange="updateSettings()">
             </div>
             <div style="grid-column: span 2; text-align: left; font-size: 0.8rem;">
