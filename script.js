@@ -145,11 +145,11 @@ function submitTurn() {
 function submitZero() { processMove(0); }
 
 function processMove(points) {
-    logRoll(p.name, points);
     let playing = players.filter(p => p.active && !p.finished);
     if (playing.length === 0) return;
     
     const p = playing[activeIndex];
+    logRoll(p.name, points);
     history.push(JSON.parse(JSON.stringify(players)));
 
     if (points === 0) {
