@@ -4,7 +4,7 @@
 let players = JSON.parse(localStorage.getItem('dice_players')) || [];
 let history = [];
 let activeIndex = 0;
-
+let rollLog = JSON.parse(localStorage.getItem('dice_roll_log')) || [];
 let settings = JSON.parse(localStorage.getItem('dice_settings')) || {
     target: 10000,
     entryLimit: 350,
@@ -145,6 +145,7 @@ function submitTurn() {
 function submitZero() { processMove(0); }
 
 function processMove(points) {
+    logRoll(p.name, points);
     let playing = players.filter(p => p.active && !p.finished);
     if (playing.length === 0) return;
     
@@ -311,6 +312,16 @@ function applySavedTheme() {
 // ==========================================
 // 7. POMOCNÉ FUNKCE A UI
 // ==========================================
+function logRoll(playerName, points) {
+    rollLog.push({
+        time: new Date().toLocaleTimeString(),
+        name: playerName,
+        points: points
+    });
+    // Udržíme jen posledních 100 hodů, aby se nezahltila paměť
+    if (rollLog.length > 100) rollLog.shift();
+    localStorage.setItem('dice_roll_log', JSON.stringify(rollLog));
+}
 function render() {
     const body = document.getElementById('scoreBody');
     const lib = document.getElementById('playerLibrary');
@@ -391,7 +402,43 @@ function save() {
     localStorage.setItem('dice_players', JSON.stringify(players));
     render();
 }
+function showRollHistory() {
+    const content = document.getElementById('rulesContent');
+    if (!content) return;
 
+    let tableHtml = `
+        <h2 style="color:var(--accent); text-align:center;">📜 Historie zápisů</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table style="width:100%; border-collapse: collapse; color: white;">
+                <thead style="position: sticky; top: 0; background: var(--bg-dark);">
+                    <tr style="border-bottom: 2px solid var(--accent);">
+                        <th style="text-align:left; padding: 8px;">Čas</th>
+                        <th style="text-align:left; padding: 8px;">Hráč</th>
+                        <th style="text-align:right; padding: 8px;">Body</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    [...rollLog].reverse().forEach(log => {
+        tableHtml += `
+            <tr style="border-bottom: 1px solid #444;">
+                <td style="padding: 8px; font-size: 0.8em; color: #aaa;">${log.time}</td>
+                <td style="padding: 8px;">${log.name}</td>
+                <td style="padding: 8px; text-align:right; font-weight:bold; color:${log.points === 0 ? 'red' : 'inherit'}">
+                    ${log.points}
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table></div>`;
+    
+    if (rollLog.length === 0) tableHtml = "<p style='text-align:center; color: #aaa;'>Zatím žádné hody.</p>";
+    
+    content.innerHTML = tableHtml;
+    openRules();
+}
 function resetScores() {
     players.forEach(p => { p.score = 0; p.zeros = 0; p.finished = false; p.finishTime = null; });
     activeIndex = 0;
