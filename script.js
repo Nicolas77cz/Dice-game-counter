@@ -186,9 +186,22 @@ function checkBotTurn() {
 
     const p = activeOnes[activeIndex];
     if (p && p.isBot) {
-        const points = simulateBotTurn();
-        // Malá vizuální pauza před zápisem
-        setTimeout(() => processMove(points), 1000);
+        // Vizuální indikace, že Bot "přemýšlí"
+        document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name} hází...`;
+
+        setTimeout(() => {
+            const points = simulateBotTurn();
+            
+            if (points === 0) {
+                // Pokud Bot hodil KIKS, dáme o tom vědět v UI
+                document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name}: KIKS! (0 bodů)`;
+                
+                // Krátká pauza, aby si hráč stihl přečíst "KIKS", než se přepne hráč
+                setTimeout(() => processMove(0), 1500);
+            } else {
+                processMove(points);
+            }
+        }, 1000);
     }
 }
 
