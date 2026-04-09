@@ -48,9 +48,9 @@ input[type="number"], input[type="text"] {
     align-items: center;
     padding: 10px 15px;
     margin: 8px 0;
-    background: #334155;
+    background: #e2e8f0; /* Světle šedá místo tmavé */
+    color: #1e293b;
     border-radius: 12px;
-    cursor: default;
 }
 
 .library-item span:first-child {
@@ -73,24 +73,23 @@ input[type="number"], input[type="text"] {
 
 /* Styly pro výběrová políčka (Selecty) v nastavení */
 select {
-    background: #1e293b;
-    color: white;
-    border: 1px solid var(--accent);
+    background: #f8fafc;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
     border-radius: 5px;
     padding: 3px 8px;
     font-family: inherit;
 }
 
-/* Tag pro BOTa v tabulce */
+/* Tag pro BOTa ve světlém režimu */
 .bot-tag {
-    background: #f8fafc;
-    color: #1e293b;
+    background: #d97706; /* Oranžovou nechte, ta k botům sedí */
+    color: white;       /* Ale písmo bílé, aby na oranžové svítilo */
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 0.7rem;
     font-weight: bold;
     margin-left: 8px;
-    vertical-align: middle;
 }
 .library-item.active { background: var(--primary); color: white; }
 
@@ -124,8 +123,7 @@ select {
     margin-top: 0; 
     color: var(--accent); 
     text-align: center; 
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #e2e8f0; /* Světlá čára */
     padding-bottom: 10px;
 }
-
 .modal-content b { color: var(--accent); }
