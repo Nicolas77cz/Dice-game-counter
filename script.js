@@ -141,9 +141,11 @@ function processMove(points) {
     history.push(JSON.parse(JSON.stringify(players)));
 
     if (points === 0) {
+        // 1. ZPRACOVÁNÍ KIKSU
         p.zeros++;
         if (p.zeros >= 3) {
-            alert("3x KIKS! " + p.name + " padá na 0 bodů.");
+            const msg = p.isBot ? `🤖 BOT ${p.name} dal 3. KIKS a padá na nulu!` : `3x KIKS! ${p.name} padá na 0 bodů.`;
+            alert(msg);
             p.score = 0; 
             p.zeros = 0;
         }
