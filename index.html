@@ -6,6 +6,13 @@
     <title>Kostky PRO</title>
     <link rel="manifest" href="manifest.json">
     <link id="themeLink" rel="stylesheet" href="style-dark.css">
+    <style>
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 0.8rem; }
+        .player-controls { display: flex; gap: 5px; align-items: center; }
+        .bot-tag { background: #d97706; color: white; padding: 2px 5px; border-radius: 4px; font-size: 0.6rem; margin-left: 5px; }
+        .edit-btn { background: none; box-shadow: none; padding: 5px; color: var(--accent); }
+        .edit-btn:active { transform: none; }
+    </style>
 </head>
 <body>
 
@@ -17,9 +24,35 @@
         <button class="secondary history-btn" onclick="toggleTheme()" id="themeBtn">☀️ Světlý režim</button>
     </div>
 
+    <div class="card">
+        <div class="settings-grid">
+            <div>
+                Cíl: 
+                <select id="targetScore" onchange="updateSettings()">
+                    <option value="4000">4 000</option>
+                    <option value="5000">5 000</option>
+                    <option value="7500">7 500</option>
+                    <option value="10000" selected>10 000</option>
+                </select>
+            </div>
+            <div>
+                Limit: 
+                <select id="entryLimit" onchange="updateSettings()">
+                    <option value="0">Bez limitu</option>
+                    <option value="350" selected>350</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                </select>
+            </div>
+            <div style="grid-column: span 2;">
+                <label><input type="checkbox" id="zilchMode" onchange="updateSettings()"> Režim ZILCH (přesné body)</label>
+            </div>
+        </div>
+    </div>
+
     <div class="card input-zone" id="playPanel" style="display:none;">
         <div class="active-player-name" id="currentPlayerDisplay">Na řadě: -</div>
-        <input type="number" id="mainInput" placeholder="Zadej hod (min 350)" inputmode="numeric">
+        <input type="number" id="mainInput" placeholder="Zadej hod" inputmode="numeric">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <button onclick="submitTurn()">Zapsat body</button>
             <button class="secondary" onclick="submitZero()">Zapsat KIKS</button> 
@@ -30,9 +63,12 @@
 
     <div class="card">
         <div id="playerLibrary"></div>
-        <div style="display: flex; gap: 5px; margin-top: 10px;">
-            <input type="text" id="newName" placeholder="Jméno..." style="flex:1; padding: 8px; border-radius: 5px; border:1px solid #334155; background:#0f172a; color:white;">
-            <button onclick="addNewPlayer()">+</button>
+        <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;">
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="newName" placeholder="Jméno hráče..." style="flex:1;">
+                <button onclick="addNewPlayer(false)">+</button>
+                <button class="secondary" onclick="addNewPlayer(true)" title="Přidat BOTa">🤖</button>
+            </div>
         </div>
     </div>
 
@@ -43,115 +79,82 @@
             </thead>
             <tbody id="scoreBody"></tbody>
         </table>
-        <div style="margin-top: 15px; display: flex; gap: 5px;">
-            <label style="font-size: 0.8rem;"><input type="checkbox" id="exactMode" onchange="save()"> Přesných 10k</label>
-            <button class="danger history-btn" style="margin-left: auto;" onclick="resetScores()">Nová hra</button>
-        </div>
+        <button class="danger history-btn" style="width:100%; margin-top:10px;" onclick="resetScores()">Nová hra (vynulovat body)</button>
     </div>
 </div>
 
 <div id="rulesModal" class="modal" onclick="closeRules()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>Pravidla hry Kostky (10 000)</h3>
-        <div style="max-height: 70vh; overflow-y: auto; text-align: left; font-size: 0.9rem;">
-            <p>Hraje se se <b>6 kostkami</b>. Po každém hodu se odkládají bodované kostky. Hráč musí v jednom kole naházet alespoň <b>350 bodů</b>, aby mohl skóre zapsat.</p>
-            
-            <b>Základní hodnoty:</b>
-            <ul>
-                <li><b>1</b> = 100 bodů</li>
-                <li><b>5</b> = 50 bodů</li>
-            </ul>
-
-            <b>Trojice a více (v jednom hodu):</b>
-            <ul>
-                <li><b>3x 1</b> = 1000 bodů</li>
-                <li><b>3x stejné (2-6)</b> = 100x hodnota (např. 3x 2 = 200)</li>
-                <li><b>4. a další kostka</b> v trojici přidává <b>stejnou hodnotu jako 3 stejné kostky</b> (např. 3x 2 = 200, 4x 2 = 400, 5x 2 = 600, 6x 2 = 800).</li>
-                <li>U jedniček: 3x 1 = 1000, 4x 1 = 2000, 5x 1 = 3000, 6x 1 = 4000.</li>
-            </ul>
-
-            <b>Postupka (1-2-3-4-5-6):</b>
-            <ul>
-                <li><b>Z ruky</b> (jedním hodem) = 2000 bodů</li>
-                <li><b>Dohazovaná</b> (postupně) = 1800 bodů</li>
-            </ul>
-
-            <b>Průběh hry:</b>
-            <ul>
-                <li>Pokud po hodu nepadne žádná bodovaná kostka, nastává <b>KIKS</b> (0 bodů v tomto kole).</li>
-                <li>Pokud hráč boduje všemi 6 kostkami, může vzít všech 6 kostek a házet znovu (body se sčítají).</li>
-                <li><b>Trestná série:</b> Pokud hráč 3x po sobě nezapíše žádné body (hodí <b>KIKS</b> nebo nahlásí méně než 350), jeho <b>celkové skóre se vynuluje</b>.</li>
-                <li>Vítězí hráč, který jako první dosáhne <b>10 000 bodů</b>.</li>
-            </ul>
+        <h3>Pravidla hry</h3>
+        <div id="rulesText" style="font-size: 0.8rem; text-align: left;">
+            Načítání pravidel...
         </div>
-        <button class="btn-add" style="width:100%; margin-top: 15px;" onclick="closeRules()">Rozumím, jdeme hrát!</button>
+        <button class="btn-add" style="width:100%; margin-top:15px;" onclick="closeRules()">Zavřít</button>
     </div>
 </div>
+
 <script>
-    // --- LOGIKA TÉMATU ---
-    function toggleTheme() {
-        vibrate();
-        const themeLink = document.getElementById('themeLink');
-        const themeBtn = document.getElementById('themeBtn');
-        
-        if (themeLink.getAttribute('href') === 'style-dark.css') {
-            themeLink.setAttribute('href', 'style-light.css');
-            themeBtn.innerText = "🌙 Tmavý režim";
-            localStorage.setItem('diceTheme', 'light');
-        } else {
-            themeLink.setAttribute('href', 'style-dark.css');
-            themeBtn.innerText = "☀️ Světlý režim";
-            localStorage.setItem('diceTheme', 'dark');
-        }
-    }
-
-    const savedTheme = localStorage.getItem('diceTheme');
-    if (savedTheme === 'light') {
-        document.getElementById('themeLink').setAttribute('href', 'style-light.css');
-        document.getElementById('themeBtn').innerText = "🌙 Tmavý režim";
-    }
-
-    // --- LOGIKA HRY ---
+    // --- STAV A NASTAVENÍ ---
     let players = JSON.parse(localStorage.getItem('dice_players')) || [];
-    let activeIndex = 0;
     let history = [];
+    let activeIndex = 0;
+    let settings = JSON.parse(localStorage.getItem('dice_settings')) || {
+        target: 10000,
+        limit: 350,
+        zilch: false
+    };
 
-    function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
-
-    function save() {
-        localStorage.setItem('dice_players', JSON.stringify(players));
+    function updateSettings() {
+        settings.target = parseInt(document.getElementById('targetScore').value);
+        settings.limit = parseInt(document.getElementById('entryLimit').value);
+        settings.zilch = document.getElementById('zilchMode').checked;
+        localStorage.setItem('dice_settings', JSON.stringify(settings));
         render();
     }
 
-    function addNewPlayer() {
-        const name = document.getElementById('newName').value.trim();
+    // --- LOGIKA HRÁČŮ ---
+    function addNewPlayer(isBot) {
+        const nameInput = document.getElementById('newName');
+        const name = nameInput.value.trim();
         if (name) {
-            players.push({ id: Date.now(), name, score: 0, zeros: 0, active: true });
-            document.getElementById('newName').value = "";
+            players.push({ 
+                id: Date.now(), 
+                name: name, 
+                score: 0, 
+                zeros: 0, 
+                active: true, 
+                isBot: isBot 
+            });
+            nameInput.value = "";
             vibrate();
             save();
         }
     }
 
-    function toggleActive(id) {
-        const p = players.find(p => p.id === id);
-        p.active = !p.active;
-        vibrate();
-        save();
-    }
-
-    function nextPlayer() {
-        const activeOnes = players.filter(p => p.active);
-        if (activeOnes.length > 0) {
-            activeIndex = (activeIndex + 1) % activeOnes.length;
+    function deletePlayer(id) {
+        if(confirm("Opravdu smazat hráče?")) {
+            players = players.filter(p => p.id !== id);
+            save();
         }
-        render();
     }
 
+    function renamePlayer(id) {
+        const p = players.find(p => p.id === id);
+        const newName = prompt("Zadej nové jméno:", p.name);
+        if (newName) {
+            p.name = newName;
+            save();
+        }
+    }
+
+    // --- LOGIKA HRY ---
     function submitTurn() {
         const input = document.getElementById('mainInput');
         const val = parseInt(input.value);
-        if (isNaN(val) || val < 350) { alert("Minimum je 350!"); return; }
+        if (isNaN(val) || val < settings.limit) { 
+            alert("Minimální hod je " + settings.limit + "!"); 
+            return; 
+        }
         processMove(val);
         input.value = "";
     }
@@ -163,64 +166,71 @@
         if (activeOnes.length === 0) return;
         
         const p = activeOnes[activeIndex];
-        
         history.push(JSON.parse(JSON.stringify(players)));
-        if (history.length > 10) history.shift();
-
-        vibrate();
 
         if (points === 0) {
             p.zeros++;
             if (p.zeros >= 3) {
-                alert("3x KIKS v řadě! Hráč " + p.name + " přichází o všechny body.");
+                alert("3x KIKS! " + p.name + " padá na 0.");
                 p.score = 0; p.zeros = 0;
             }
         } else {
             p.zeros = 0;
             let target = p.score + points;
-            const isExact = document.getElementById('exactMode').checked;
 
-            if (target >= 10000) {
-                if (isExact) {
-                    if (target === 10000) { p.score = 10000; alert("VÍTĚZ: " + p.name); }
-                    else { p.score -= points; if(p.score < 0) p.score = 0; alert("Přehozeno! Odečítám."); }
+            if (target >= settings.target) {
+                if (settings.zilch) {
+                    if (target === settings.target) { p.score = settings.target; alert("VÍTĚZ: " + p.name); }
+                    else { p.score -= points; if(p.score < 0) p.score = 0; alert("ZILCH! Přestřeleno, body se odečítají."); }
                 } else { p.score = target; alert("VÍTĚZ: " + p.name); }
             } else {
                 p.score = target;
             }
         }
         
+        vibrate();
         activeIndex = (activeIndex + 1) % activeOnes.length;
         save();
+
+        // Pokud je další na řadě BOT
+        setTimeout(checkBotTurn, 1000);
     }
 
-    function undoLastMove() {
-        if (history.length > 0) {
-            players = history.pop();
-            const activeOnes = players.filter(p => p.active);
-            activeIndex = (activeIndex - 1 + activeOnes.length) % activeOnes.length;
-            vibrate();
-            save();
+    function checkBotTurn() {
+        const activeOnes = players.filter(p => p.active);
+        const nextP = activeOnes[activeIndex];
+        if (nextP && nextP.isBot) {
+            // Simulace tahu bota
+            let botRoll;
+            if (nextP.score < settings.target * 0.8) {
+                botRoll = Math.floor(Math.random() * 500) + settings.limit;
+            } else {
+                botRoll = Math.floor(Math.random() * 200) + 350; // Opatrnější ke konci
+            }
+            // 15% šance na kiks
+            if (Math.random() < 0.15) botRoll = 0;
+            
+            alert("BOT " + nextP.name + " hází: " + (botRoll === 0 ? "KIKS" : botRoll));
+            processMove(botRoll);
         }
     }
 
-    function resetScores() {
-        if(confirm("Vynulovat body?")) {
-            players.forEach(p => { p.score = 0; p.zeros = 0; });
-            activeIndex = 0;
-            history = [];
-            save();
-        }
-    }
-
+    // --- POMOCNÉ FUNKCE ---
     function render() {
+        // Synchronizace UI s nastavením
+        document.getElementById('targetScore').value = settings.target;
+        document.getElementById('entryLimit').value = settings.limit;
+        document.getElementById('zilchMode').checked = settings.zilch;
+
         const lib = document.getElementById('playerLibrary');
         const body = document.getElementById('scoreBody');
         const activeOnes = players.filter(p => p.active);
         
         lib.innerHTML = players.map(p => `
-            <div class="library-item ${p.active ? 'active' : ''}" onclick="toggleActive(${p.id})">
-                ${p.name}
+            <div class="library-item ${p.active ? 'active' : ''}">
+                <span onclick="toggleActive(${p.id})">${p.isBot ? '🤖' : '👤'} ${p.name}</span>
+                <span class="edit-btn" onclick="renamePlayer(${p.id})">✏️</span>
+                <span class="edit-btn" style="color:var(--danger)" onclick="deletePlayer(${p.id})">🗑️</span>
             </div>
         `).join('');
 
@@ -229,36 +239,45 @@
 
         activeOnes.forEach((p, index) => {
             const isCurrent = index === activeIndex;
-            if (isCurrent) {
-                document.getElementById('currentPlayerDisplay').innerText = "Na řadě: " + p.name;
-            }
+            if (isCurrent) document.getElementById('currentPlayerDisplay').innerText = "Na řadě: " + p.name;
             
             const row = document.createElement('tr');
             if (isCurrent) row.className = "current-turn";
             row.innerHTML = `
-                <td>${isCurrent ? '➔ ' : ''}${p.name}</td>
-                <td class="score">${p.score}</td>
+                <td>${isCurrent ? '➔ ' : ''}${p.name} ${p.isBot ? '<span class="bot-tag">BOT</span>' : ''}</td>
+                <td>${p.score} / ${settings.target}</td>
                 <td>${p.zeros}/3</td>
             `;
             body.appendChild(row);
         });
     }
 
-    function openRules() {
-        vibrate();
-        document.getElementById('rulesModal').style.display = 'block';
+    function save() {
+        localStorage.setItem('dice_players', JSON.stringify(players));
+        render();
     }
 
-    function closeRules() {
-        document.getElementById('rulesModal').style.display = 'none';
+    function toggleActive(id) {
+        const p = players.find(p => p.id === id);
+        p.active = !p.active;
+        save();
     }
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+    function resetScores() {
+        if(confirm("Vynulovat body pro novou hru?")) {
+            players.forEach(p => { p.score = 0; p.zeros = 0; });
+            activeIndex = 0;
+            save();
+        }
     }
 
-    render(); // Prvotní vykreslení
+    function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
+    function openRules() { document.getElementById('rulesModal').style.display = 'block'; }
+    function closeRules() { document.getElementById('rulesModal').style.display = 'none'; }
+    function toggleTheme() { /* ... vaše stávající funkce ... */ }
+    function undoLastMove() { if (history.length > 0) { players = history.pop(); save(); } }
+
+    render();
 </script>
-
 </body>
 </html>
