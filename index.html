@@ -41,19 +41,26 @@
     <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
 
     <div class="card">
-        <h3 style="margin-top:0; font-size: 1rem; opacity: 0.8;">Správa hráčů</h3>
-        <div id="playerLibrary"></div>
-        <div style="display: flex; gap: 5px; margin-top: 10px;">
-            <input type="text" id="newName" placeholder="Jméno hráče/bota">
-            <select id="botDifficultySelect">
+    <h3 style="margin-top:0; font-size: 1rem; opacity: 0.8;">Správa hráčů</h3>
+    
+    <div id="playerLibrary"></div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+        
+        <input type="text" id="newName" placeholder="Jméno hráče/bota" style="width: 100%; box-sizing: border-box;">
+
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <select id="botDifficultySelect" style="flex: 1; min-width: 100px;">
                 <option value="conservative">Opatrný</option>
                 <option value="normal" selected>Normální</option>
                 <option value="crazy">Blázen</option>
             </select>
-    <button onclick="addNewPlayer(false)">👤 Přidat Hráče</button>
-    <button onclick="addNewPlayer(true)">🤖 Přidat Bota</button>
+            <button onclick="addNewPlayer(false)" style="flex: 1;">👤 Hráč</button>
+            <button onclick="addNewPlayer(true)" style="flex: 1;">🤖 Bot</button>
         </div>
+
     </div>
+</div>
 
     <div class="card">
         <h3 style="margin-top:0; font-size: 1rem; opacity: 0.8;">Nastavení hry</h3>
