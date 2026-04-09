@@ -38,10 +38,34 @@ button.danger { background: var(--danger); box-shadow: 0 4px 0 #991b1b; }
 .active-player-name { color: var(--accent); font-size: 1.4rem; margin-bottom: 10px; font-weight: bold; }
 
 input[type="number"], input[type="text"] {
-    padding: 12px; border-radius: 10px; border: 2px solid #334155; 
-    background: #0f172a; color: white; text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid #334155;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    width: 100%;           /* ZABERE CELOU ŠÍŘKU */
+    box-sizing: border-box; /* ZAJISTÍ, ŽE PADDING NEZVĚTŠÍ INPUT */
+    margin-bottom: 10px;    /* MEZERA MEZI INPUTEM A TLAČÍTKY */
+    font-size: 1.1rem;      /* LEPŠÍ ČITELNOST NA MOBILU */
 }
 
+/* Úprava mřížky tlačítek, aby se nelepila na okraje karty */
+.input-zone div {
+    width: 100%;
+}
+
+/* Oprava barvy pro smazání (🗑️), aby byla vidět i v tmavém režimu */
+.edit-btn[onclick*="deletePlayer"] {
+    color: var(--danger) !important;
+}
+
+/* Vylepšení pro aktivního hráče v knihovně */
+.library-item.active { 
+    background: var(--primary); 
+    border: 1px solid var(--accent);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
 .library-item {
     display: flex;
     justify-content: space-between;
