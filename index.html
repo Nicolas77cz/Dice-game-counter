@@ -44,9 +44,14 @@
         <h3 style="margin-top:0; font-size: 1rem; opacity: 0.8;">Správa hráčů</h3>
         <div id="playerLibrary"></div>
         <div style="display: flex; gap: 5px; margin-top: 10px;">
-            <input type="text" id="newName" placeholder="Jméno..." style="flex:1; margin-bottom:0;">
-            <button onclick="addNewPlayer(false)">+</button>
-            <button class="secondary" onclick="addNewPlayer(true)">🤖</button>
+            <input type="text" id="newName" placeholder="Jméno hráče/bota">
+            <select id="botDifficultySelect">
+                <option value="conservative">Opatrný</option>
+                <option value="normal" selected>Normální</option>
+                <option value="crazy">Blázen</option>
+            </select>
+    <button onclick="addNewPlayer(false)">👤 Přidat Hráče</button>
+    <button onclick="addNewPlayer(true)">🤖 Přidat Bota</button>
         </div>
     </div>
 
