@@ -4,7 +4,6 @@
 let players = JSON.parse(localStorage.getItem('dice_players')) || [];
 let history = [];
 let activeIndex = 0;
-let botDifficulty = 'normal'; 
 
 let settings = JSON.parse(localStorage.getItem('dice_settings')) || {
     target: 10000,
@@ -61,6 +60,9 @@ function addNewPlayer(isBot) {
     const nameInput = document.getElementById('newName');
     const name = nameInput.value.trim();
     if (name) {
+        // Při vytvoření bota mu přidělíme náhodnou nebo fixní obtížnost
+        const difficulty = isBot ? prompt("Zadej obtížnost (conservative/normal/crazy):", "normal") : null;
+        
         players.push({ 
             id: Date.now(), 
             name: name, 
@@ -68,6 +70,7 @@ function addNewPlayer(isBot) {
             zeros: 0, 
             active: true, 
             isBot: isBot,
+            difficulty: difficulty || 'normal', // Uloženo u hráče
             finished: false,
             finishTime: null
         });
@@ -80,7 +83,8 @@ function addNewPlayer(isBot) {
 function deletePlayer(id) {
     if(confirm("Opravdu smazat hráče?")) {
         players = players.filter(p => p.id !== id);
-        if (activeIndex >= players.filter(p => p.active && !p.finished).length) activeIndex = 0;
+        const playing = players.filter(p => p.active && !p.finished);
+        if (activeIndex >= playing.length) activeIndex = 0;
         save();
     }
 }
@@ -164,11 +168,9 @@ function processMove(points) {
     
     vibrate();
     
-    // Aktualizujeme seznam hrajících po tahu
     playing = players.filter(p => p.active && !p.finished);
-    
-    // KONEC HRY: Pokud zbývá jen jeden (nebo žádný při hře solo)
     const totalActive = players.filter(p => p.active).length;
+
     if ((totalActive > 1 && playing.length <= 1) || (totalActive === 1 && playing.length === 0)) {
         if (playing.length === 1) {
             playing[0].finished = true;
@@ -177,7 +179,6 @@ function processMove(points) {
         save();
         showFinalResults();
     } else {
-        // Posun na dalšího hrajícího
         activeIndex = (activeIndex + (p.finished ? 0 : 1)) % playing.length;
         save();
         setTimeout(checkBotTurn, 1000);
@@ -185,7 +186,7 @@ function processMove(points) {
 }
 
 // ==========================================
-// 5. BOT LOGIKA
+// 5. BOT LOGIKA (S INTELIGENCÍ A OSOBNOSTÍ)
 // ==========================================
 function checkBotTurn() {
     const playing = players.filter(p => p.active && !p.finished);
@@ -193,9 +194,9 @@ function checkBotTurn() {
 
     const p = playing[activeIndex];
     if (p && p.isBot) {
-        document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name} hází...`;
+        document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name} (${p.difficulty}) hází...`;
         setTimeout(() => {
-            const points = simulateBotTurn();
+            const points = simulateBotTurn(p); // Předáme celého bota pro kontrolu stavu
             if (points === 0) {
                 document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name}: KIKS! (0 bodů)`;
                 setTimeout(() => processMove(0), 1500);
@@ -206,26 +207,39 @@ function checkBotTurn() {
     }
 }
 
-function simulateBotTurn() {
+function simulateBotTurn(bot) {
     let turnPoints = 0;
     let diceCount = 6;
     let stop = false;
+
     const diffs = {
-        'conservative': { kiksMod: 0.8, riskLimit: 1.2, stopChance: 0.8 },
-        'normal':       { kiksMod: 1.0, riskLimit: 1.5, stopChance: 0.6 },
-        'crazy':        { kiksMod: 1.3, riskLimit: 2.5, stopChance: 0.3 }
+        'conservative': { kiksMod: 0.7, riskLimit: 1.1, stopChance: 0.85 },
+        'normal':       { kiksMod: 1.0, riskLimit: 1.4, stopChance: 0.65 },
+        'crazy':        { kiksMod: 1.4, riskLimit: 2.2, stopChance: 0.35 }
     };
-    const d = diffs[botDifficulty] || diffs['normal'];
+    
+    const d = diffs[bot.difficulty] || diffs['normal'];
 
     while (!stop) {
-        let kiksChance = (diceCount <= 3 ? 0.2 : 0.1) * d.kiksMod;
-        if (diceCount === 1) kiksChance = 0.4 * d.kiksMod;
+        // --- LOGIKA 3. KIKSU ---
+        // Pokud má bot 2 kiksy, šance na pokračování je minimální, jakmile splní limit
+        if (bot.zeros === 2 && turnPoints >= settings.turnLimit) {
+             return turnPoints; // Okamžitě končí, neriskuje smazání skóre
+        }
+
+        let kiksChance = (diceCount <= 3 ? 0.25 : 0.1) * d.kiksMod;
+        if (diceCount === 1) kiksChance = 0.45 * d.kiksMod;
+        
+        // Pokud má 2 kiksy, vnímá riziko jako dvojnásobné
+        if (bot.zeros === 2) kiksChance *= 1.5;
+
         if (Math.random() < kiksChance) return 0;
 
         let roll = Math.random();
         let throwGain = 0;
         let usedDice = 0;
 
+        // Simulace hodu
         if (roll < 0.03) { 
             throwGain = (diceCount === 6) ? 2000 : 1800;
             usedDice = diceCount; 
@@ -240,12 +254,37 @@ function simulateBotTurn() {
             throwGain = usedDice * (Math.random() > 0.5 ? 100 : 50);
         }
 
+        // --- LOGIKA ZILCH (PŘEHOZENÍ) ---
+        if (settings.zilch) {
+            let predictedTotal = bot.score + turnPoints + throwGain;
+            let gap = settings.target - (bot.score + turnPoints);
+
+            // Pokud by tento hod způsobil přehození
+            if (predictedTotal > settings.target) {
+                // Bot tento hod "neudělá" (v simulaci), raději zapíše co má
+                return turnPoints > 0 ? turnPoints : 0;
+            }
+            
+            // Pokud je blízko cíle (zbývá méně než průměrný hod 350)
+            if (gap < 400 && turnPoints + throwGain < gap) {
+                // Tady bot "přemýšlí" - pokud už má body, které ho posunou na bezpečnou vzdálenost
+                // (třeba 9700), tak raději zastaví, než aby riskoval přehození dalším hodem.
+                if (gap - (turnPoints + throwGain) < settings.turnLimit) {
+                    turnPoints += throwGain;
+                    return turnPoints;
+                }
+            }
+        }
+
         turnPoints += throwGain;
         diceCount -= usedDice;
         if (diceCount <= 0) diceCount = 6;
 
-        if (turnPoints >= settings.turnLimit * d.riskLimit) stop = true;
-        else if (turnPoints >= settings.turnLimit) {
+        // --- ROZHODOVÁNÍ O KONCI TAHU ---
+        let currentLimit = (bot.score === 0) ? settings.entryLimit : settings.turnLimit;
+        
+        if (turnPoints >= currentLimit * d.riskLimit) stop = true;
+        else if (turnPoints >= currentLimit) {
             if (Math.random() < d.stopChance || diceCount < 3) stop = true;
         }
     }
@@ -269,7 +308,7 @@ function render() {
     
     lib.innerHTML = players.map(p => `
         <div class="library-item ${p.active ? 'active' : ''} ${p.finished ? 'finished' : ''}">
-            <span onclick="toggleActive(${p.id})">${p.isBot ? '🤖' : '👤'} ${p.name} ${p.finished ? '🏆' : ''}</span>
+            <span onclick="toggleActive(${p.id})">${p.isBot ? '🤖' : '👤'} ${p.name} (${p.isBot ? p.difficulty : 'Hráč'})</span>
             <span class="edit-btn" onclick="renamePlayer(${p.id})">✏️</span>
             <span class="edit-btn" onclick="deletePlayer(${p.id})">🗑️</span>
         </div>
