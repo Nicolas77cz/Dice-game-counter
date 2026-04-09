@@ -4,7 +4,7 @@
 let players = JSON.parse(localStorage.getItem('dice_players')) || [];
 let history = [];
 let activeIndex = 0;
-let botDifficulty = 'normal'; // Výchozí obtížnost bota
+let botDifficulty = 'normal'; 
 
 let settings = JSON.parse(localStorage.getItem('dice_settings')) || {
     target: 10000,
@@ -44,7 +44,6 @@ function updateSettings() {
         settings.turnLimit = parseInt(turnInput.value);
     }
 
-    // Logická pojistka
     if (settings.entryLimit < settings.turnLimit) {
         settings.entryLimit = settings.turnLimit;
         document.getElementById('entryLimit').value = settings.turnLimit;
@@ -68,7 +67,9 @@ function addNewPlayer(isBot) {
             score: 0, 
             zeros: 0, 
             active: true, 
-            isBot: isBot 
+            isBot: isBot,
+            finished: false,
+            finishTime: null
         });
         nameInput.value = "";
         vibrate();
@@ -79,7 +80,7 @@ function addNewPlayer(isBot) {
 function deletePlayer(id) {
     if(confirm("Opravdu smazat hráče?")) {
         players = players.filter(p => p.id !== id);
-        if (activeIndex >= players.filter(p => p.active).length) activeIndex = 0;
+        if (activeIndex >= players.filter(p => p.active && !p.finished).length) activeIndex = 0;
         save();
     }
 }
@@ -97,6 +98,7 @@ function toggleActive(id) {
     const p = players.find(p => p.id === id);
     if (p) {
         p.active = !p.active;
+        p.finished = false;
         activeIndex = 0;
         save();
     }
@@ -108,10 +110,10 @@ function toggleActive(id) {
 function submitTurn() {
     const input = document.getElementById('mainInput');
     const val = parseInt(input.value);
-    const activeOnes = players.filter(p => p.active);
-    if (activeOnes.length === 0) return;
+    const playing = players.filter(p => p.active && !p.finished);
+    if (playing.length === 0) return;
 
-    const p = activeOnes[activeIndex];
+    const p = playing[activeIndex];
     const currentLimit = (p.score === 0) ? settings.entryLimit : settings.turnLimit;
 
     if (isNaN(val) || val < currentLimit || val % 50 !== 0) { 
@@ -124,24 +126,14 @@ function submitTurn() {
 
 function submitZero() { processMove(0); }
 
-function nextPlayer() {
-    const activeOnes = players.filter(p => p.active);
-    if (activeOnes.length > 0) {
-        activeIndex = (activeIndex + 1) % activeOnes.length;
-        render();
-        checkBotTurn();
-    }
-}
-
 function processMove(points) {
-    const activeOnes = players.filter(p => p.active);
-    if (activeOnes.length === 0) return;
+    let playing = players.filter(p => p.active && !p.finished);
+    if (playing.length === 0) return;
     
-    const p = activeOnes[activeIndex];
+    const p = playing[activeIndex];
     history.push(JSON.parse(JSON.stringify(players)));
 
     if (points === 0) {
-        // 1. ZPRACOVÁNÍ KIKSU
         p.zeros++;
         if (p.zeros >= 3) {
             const msg = p.isBot ? `🤖 BOT ${p.name} dal 3. KIKS a padá na nulu!` : `3x KIKS! ${p.name} padá na 0 bodů.`;
@@ -162,43 +154,50 @@ function processMove(points) {
             }
         } else if (potentialScore === settings.target) {
             p.score = potentialScore;
-            alert("VÍTĚZSTVÍ! " + p.name + " vyhrává!");
+            p.finished = true;
+            p.finishTime = Date.now();
+            alert("VÍTĚZSTVÍ! " + p.name + " dosáhl cíle a končí.");
         } else {
             p.score = potentialScore;
         }
     }
     
     vibrate();
-    save(); // save volá render
     
-    // Posun na dalšího hráče
-    activeIndex = (activeIndex + 1) % activeOnes.length;
-    render();
+    // Aktualizujeme seznam hrajících po tahu
+    playing = players.filter(p => p.active && !p.finished);
     
-    // Kontrola, zda po posunu není na řadě bot
-    setTimeout(checkBotTurn, 1000);
+    // KONEC HRY: Pokud zbývá jen jeden (nebo žádný při hře solo)
+    const totalActive = players.filter(p => p.active).length;
+    if ((totalActive > 1 && playing.length <= 1) || (totalActive === 1 && playing.length === 0)) {
+        if (playing.length === 1) {
+            playing[0].finished = true;
+            playing[0].finishTime = Date.now() + 1;
+        }
+        save();
+        showFinalResults();
+    } else {
+        // Posun na dalšího hrajícího
+        activeIndex = (activeIndex + (p.finished ? 0 : 1)) % playing.length;
+        save();
+        setTimeout(checkBotTurn, 1000);
+    }
 }
 
 // ==========================================
-// 5. BOT LOGIKA (OSOBNOSTI A SIMULACE)
+// 5. BOT LOGIKA
 // ==========================================
 function checkBotTurn() {
-    const activeOnes = players.filter(p => p.active);
-    if (activeOnes.length === 0) return;
+    const playing = players.filter(p => p.active && !p.finished);
+    if (playing.length === 0) return;
 
-    const p = activeOnes[activeIndex];
+    const p = playing[activeIndex];
     if (p && p.isBot) {
-        // Vizuální indikace, že Bot "přemýšlí"
         document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name} hází...`;
-
         setTimeout(() => {
             const points = simulateBotTurn();
-            
             if (points === 0) {
-                // Pokud Bot hodil KIKS, dáme o tom vědět v UI
                 document.getElementById('currentPlayerDisplay').innerText = `🤖 ${p.name}: KIKS! (0 bodů)`;
-                
-                // Krátká pauza, aby si hráč stihl přečíst "KIKS", než se přepne hráč
                 setTimeout(() => processMove(0), 1500);
             } else {
                 processMove(points);
@@ -211,24 +210,21 @@ function simulateBotTurn() {
     let turnPoints = 0;
     let diceCount = 6;
     let stop = false;
-
     const diffs = {
         'conservative': { kiksMod: 0.8, riskLimit: 1.2, stopChance: 0.8 },
         'normal':       { kiksMod: 1.0, riskLimit: 1.5, stopChance: 0.6 },
         'crazy':        { kiksMod: 1.3, riskLimit: 2.5, stopChance: 0.3 }
     };
-    
     const d = diffs[botDifficulty] || diffs['normal'];
 
     while (!stop) {
         let kiksChance = (diceCount <= 3 ? 0.2 : 0.1) * d.kiksMod;
         if (diceCount === 1) kiksChance = 0.4 * d.kiksMod;
-
         if (Math.random() < kiksChance) return 0;
 
+        let roll = Math.random();
         let throwGain = 0;
         let usedDice = 0;
-        let roll = Math.random();
 
         if (roll < 0.03) { 
             throwGain = (diceCount === 6) ? 2000 : 1800;
@@ -248,9 +244,8 @@ function simulateBotTurn() {
         diceCount -= usedDice;
         if (diceCount <= 0) diceCount = 6;
 
-        if (turnPoints >= settings.turnLimit * d.riskLimit) {
-            stop = true;
-        } else if (turnPoints >= settings.turnLimit) {
+        if (turnPoints >= settings.turnLimit * d.riskLimit) stop = true;
+        else if (turnPoints >= settings.turnLimit) {
             if (Math.random() < d.stopChance || diceCount < 3) stop = true;
         }
     }
@@ -261,7 +256,6 @@ function simulateBotTurn() {
 // 6. POMOCNÉ FUNKCE A UI
 // ==========================================
 function render() {
-    // UI Synchronizace nastavení
     document.getElementById('targetScore').value = settings.target;
     document.getElementById('entryLimit').value = settings.entryLimit;
     document.getElementById('turnLimit').value = settings.turnLimit;
@@ -271,20 +265,20 @@ function render() {
 
     const lib = document.getElementById('playerLibrary');
     const body = document.getElementById('scoreBody');
-    const activeOnes = players.filter(p => p.active);
+    const playing = players.filter(p => p.active && !p.finished);
     
     lib.innerHTML = players.map(p => `
-        <div class="library-item ${p.active ? 'active' : ''}">
-            <span onclick="toggleActive(${p.id})">${p.isBot ? '🤖' : '👤'} ${p.name}</span>
+        <div class="library-item ${p.active ? 'active' : ''} ${p.finished ? 'finished' : ''}">
+            <span onclick="toggleActive(${p.id})">${p.isBot ? '🤖' : '👤'} ${p.name} ${p.finished ? '🏆' : ''}</span>
             <span class="edit-btn" onclick="renamePlayer(${p.id})">✏️</span>
             <span class="edit-btn" onclick="deletePlayer(${p.id})">🗑️</span>
         </div>
     `).join('');
 
     body.innerHTML = "";
-    document.getElementById('playPanel').style.display = activeOnes.length ? 'block' : 'none';
+    document.getElementById('playPanel').style.display = playing.length ? 'block' : 'none';
 
-    activeOnes.forEach((p, index) => {
+    playing.forEach((p, index) => {
         const isCurrent = index === activeIndex;
         if (isCurrent) document.getElementById('currentPlayerDisplay').innerText = "Na řadě: " + p.name;
         
@@ -299,17 +293,36 @@ function render() {
     });
 }
 
+function showFinalResults() {
+    const results = [...players.filter(p => p.active)].sort((a, b) => {
+        if (a.finished && b.finished) return a.finishTime - b.finishTime;
+        if (a.finished) return -1;
+        if (b.finished) return 1;
+        return b.score - a.score;
+    });
+
+    let resultsHtml = results.map((p, i) => `
+        <div style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom:1px solid var(--accent); color: white;">
+            <span>${i + 1}. ${p.isBot ? '🤖' : '👤'} ${p.name}</span>
+            <b>${p.score} b.</b>
+        </div>
+    `).join('');
+
+    const content = document.getElementById('rulesContent');
+    content.innerHTML = `<h2 style="color:var(--accent); text-align:center;">🏆 Konečné pořadí</h2>${resultsHtml}
+    <button onclick="resetScores(); closeRules();" style="width:100%; margin-top:20px; padding:10px; background:var(--accent); border:none; color:white; border-radius:5px; cursor:pointer;">Nová hra</button>`;
+    openRules();
+}
+
 function save() {
     localStorage.setItem('dice_players', JSON.stringify(players));
     render();
 }
 
 function resetScores() {
-    if(confirm("Vynulovat body pro novou hru?")) {
-        players.forEach(p => { p.score = 0; p.zeros = 0; });
-        activeIndex = 0;
-        save();
-    }
+    players.forEach(p => { p.score = 0; p.zeros = 0; p.finished = false; p.finishTime = null; });
+    activeIndex = 0;
+    save();
 }
 
 function undoLastMove() {
@@ -326,7 +339,6 @@ function toggleTheme() {
     vibrate();
     const themeLink = document.getElementById('themeLink');
     const themeBtn = document.getElementById('themeBtn');
-    
     if (themeLink.getAttribute('href').includes('dark')) {
         themeLink.setAttribute('href', 'style-light.css');
         themeBtn.innerText = "🌙 Tmavý režim";
@@ -342,7 +354,6 @@ function applySavedTheme() {
     const savedTheme = localStorage.getItem('diceTheme');
     const themeLink = document.getElementById('themeLink');
     const themeBtn = document.getElementById('themeBtn');
-    
     if (savedTheme === 'light') {
         themeLink.setAttribute('href', 'style-light.css');
         if (themeBtn) themeBtn.innerText = "🌙 Tmavý režim";
