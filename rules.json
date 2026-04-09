@@ -4,7 +4,7 @@
     "singles": "1 = 100 bodů, 5 = 50 bodů.",
     "sets": "Trojice = 100x hodnota (3x 2 = 200, 3x 1 = 1000). Každá další kostka (4. až 6.) přičítá hodnotu trojice (např. 4x 2 = 400, 5x 2 = 600, 6x 2 = 800).",
     "straights": "Postupka 1-6: Z ruky = 2000, dohazovaná = 1800.",
-    "kiks": "Pokud hráč nezapíše žádné body. 3x KIKS v řadě = smazání celého skóre na 0!"
+    "kiks": "KIKS: Pokud hráč nezapíše žádné body. 3x KIKS v řadě = smazání celého skóre na 0!"
   },
   "limits_info": {
     "entry": "Vstupní limit: Body potřebné pro úplně první zápis do hry.",
