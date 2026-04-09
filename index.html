@@ -85,11 +85,39 @@
 
 <div id="rulesModal" class="modal" onclick="closeRules()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>Pravidla hry</h3>
-        <div id="rulesText" style="font-size: 0.8rem; text-align: left;">
-            Načítání pravidel...
+        <h3>Pravidla hry Kostky</h3>
+        <div style="max-height: 70vh; overflow-y: auto; text-align: left; font-size: 0.9rem;">
+            <p>Hraje se se <b>6 kostkami</b>. Po každém hodu se odkládají bodované kostky. Hráč musí v jednom kole naházet alespoň <b>350 bodů</b>, aby mohl skóre zapsat.</p>
+            
+            <b>Základní hodnoty:</b>
+            <ul>
+                <li><b>1</b> = 100 bodů</li>
+                <li><b>5</b> = 50 bodů</li>
+            </ul>
+
+            <b>Trojice a více (v jednom hodu):</b>
+            <ul>
+                <li><b>3x 1</b> = 1000 bodů</li>
+                <li><b>3x stejné (2-6)</b> = 100x hodnota (např. 3x 2 = 200)</li>
+                <li><b>4. a další kostka</b> v trojici hodnotu <b>zdvojnásobuje</b> (např. 3x 2 = 200, 4x 2 = 400, 5x 2 = 800, 6x 2 = 1600).</li>
+                <li>U jedniček: 3x 1 = 1000, 4x 1 = 2000, 5x 1 = 3000, 6x 1 = 4000.</li>
+            </ul>
+
+            <b>Postupka (1-2-3-4-5-6):</b>
+            <ul>
+                <li><b>Z ruky</b> (jedním hodem) = 2000 bodů</li>
+                <li><b>Dohazovaná</b> (postupně max na 2 hody) = 1800 bodů</li>
+            </ul>
+
+            <b>Průběh hry:</b>
+            <ul>
+                <li>Pokud po hodu nepadne žádná bodovaná kostka, nastává <b>KIKS</b> (0 bodů v tomto kole).</li>
+                <li>Pokud hráč boduje všemi 6 kostkami, může vzít všech 6 kostek a házet znovu (body se sčítají).</li>
+                <li><b>Trestná série:</b> Pokud hráč 3x po sobě nezapíše žádné body (hodí <b>KIKS</b> nebo nahlásí méně než 350), jeho <b>celkové skóre se vynuluje</b>.</li>
+                <li>Vítězí hráč, který jako první dosáhne <b>10 000 bodů</b>.</li>
+            </ul>
         </div>
-        <button class="btn-add" style="width:100%; margin-top:15px;" onclick="closeRules()">Zavřít</button>
+        <button class="btn-add" style="width:100%; margin-top: 15px;" onclick="closeRules()">Rozumím, jdeme hrát!</button>
     </div>
 </div>
 
