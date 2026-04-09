@@ -232,18 +232,17 @@ function simulateBotTurn(bot) {
     };
     
     const d = diffs[bot.difficulty] || diffs['normal'];
+    const currentLimit = (bot.score === 0) ? settings.entryLimit : settings.turnLimit;
 
     while (!stop) {
-        // --- LOGIKA 3. KIKSU ---
-        // Pokud má bot 2 kiksy, šance na pokračování je minimální, jakmile splní limit
-        if (bot.zeros === 2 && turnPoints >= settings.turnLimit) {
-             return turnPoints; // Okamžitě končí, neriskuje smazání skóre
+        // --- POJISTKA 3. KIKSU ---
+        if (bot.zeros === 2 && turnPoints >= currentLimit) {
+             return turnPoints; 
         }
 
+        // --- SIMULACE HODU ---
         let kiksChance = (diceCount <= 3 ? 0.25 : 0.1) * d.kiksMod;
         if (diceCount === 1) kiksChance = 0.45 * d.kiksMod;
-        
-        // Pokud má 2 kiksy, vnímá riziko jako dvojnásobné
         if (bot.zeros === 2) kiksChance *= 1.5;
 
         if (Math.random() < kiksChance) return 0;
@@ -252,7 +251,6 @@ function simulateBotTurn(bot) {
         let throwGain = 0;
         let usedDice = 0;
 
-        // Simulace hodu
         if (roll < 0.03) { 
             throwGain = (diceCount === 6) ? 2000 : 1800;
             usedDice = diceCount; 
@@ -267,25 +265,12 @@ function simulateBotTurn(bot) {
             throwGain = usedDice * (Math.random() > 0.5 ? 100 : 50);
         }
 
-        // --- LOGIKA ZILCH (PŘEHOZENÍ) ---
+        // --- ZILCH KONTROLA ---
         if (settings.zilch) {
             let predictedTotal = bot.score + turnPoints + throwGain;
-            let gap = settings.target - (bot.score + turnPoints);
-
-            // Pokud by tento hod způsobil přehození
             if (predictedTotal > settings.target) {
-                // Bot tento hod "neudělá" (v simulaci), raději zapíše co má
-                return turnPoints > 0 ? turnPoints : 0;
-            }
-            
-            // Pokud je blízko cíle (zbývá méně než průměrný hod 350)
-            if (gap < 400 && turnPoints + throwGain < gap) {
-                // Tady bot "přemýšlí" - pokud už má body, které ho posunou na bezpečnou vzdálenost
-                // (třeba 9700), tak raději zastaví, než aby riskoval přehození dalším hodem.
-                if (gap - (turnPoints + throwGain) < settings.turnLimit) {
-                    turnPoints += throwGain;
-                    return turnPoints;
-                }
+                // Pokud už má bot nahráno aspoň limit, raději skončí před tímto hodem
+                return turnPoints >= currentLimit ? turnPoints : 0;
             }
         }
 
@@ -293,16 +278,24 @@ function simulateBotTurn(bot) {
         diceCount -= usedDice;
         if (diceCount <= 0) diceCount = 6;
 
-        // --- ROZHODOVÁNÍ O KONCI TAHU ---
-        let currentLimit = (bot.score === 0) ? settings.entryLimit : settings.turnLimit;
-        
-        if (turnPoints >= currentLimit * d.riskLimit) stop = true;
-        else if (turnPoints >= currentLimit) {
+        // --- ROZHODOVÁNÍ O KONCI (Tady byla chyba) ---
+        // 1. Bot MUSÍ pokračovat, dokud nemá aspoň limit (currentLimit)
+        if (turnPoints < currentLimit) {
+            stop = false; 
+        } 
+        // 2. Pokud má limit splněn, rozhoduje se podle obtížnosti
+        else if (turnPoints >= currentLimit * d.riskLimit) {
+            stop = true;
+        } else {
             if (Math.random() < d.stopChance || diceCount < 3) stop = true;
         }
     }
-    return turnPoints;
+
+    // FINÁLNÍ POJISTKA: Pokud by nějakou chybou v logice bot vypadl z cyklu pod limitem, 
+    // vrací 0 (bere se to jako by neriskoval a kiksul/nedosáhl limitu).
+    return turnPoints >= currentLimit ? turnPoints : 0;
 }
+
 
 // ==========================================
 // 6. POMOCNÉ FUNKCE A UI
