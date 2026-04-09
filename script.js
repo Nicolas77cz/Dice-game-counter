@@ -525,5 +525,4 @@ function closeRules() { const m = document.getElementById('rulesModal'); if(m) m
 // 8. INICIALIZACE
 // ==========================================
 applySavedTheme();
-updateRulesText();
 render();
