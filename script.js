@@ -261,9 +261,10 @@ async function updateRulesText() {
                 • <b>Kolo (${settings.turnLimit}):</b> ${d.limits_info.turn}<br>
                 • <b>ZILCH:</b> ${d.limits_info.zilch}
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.8;">
-                ${d.features.bot}<br>
-                ${d.features.management}
+            <div style="margin-bottom:5px;">
+                <b style="color:var(--accent);">Funkce aplikace:</b><br>
+                • ${d.features.bot}<br>
+                • ${d.features.management}
             </div>
         `;
     } catch (e) {
