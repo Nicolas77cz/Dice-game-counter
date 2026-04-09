@@ -258,4 +258,124 @@ function simulateBotTurn(bot) {
             usedDice = count;
         } else {
             usedDice = Math.min(diceCount, Math.floor(Math.random() * 2 + 1));
-            throwGain = usedDice * (Math.
+            throwGain = usedDice * (Math.random() > 0.5 ? 100 : 50);
+        }
+
+        if (settings.zilch && (bot.score + turnPoints + throwGain > settings.target)) {
+            return turnPoints >= currentLimit ? turnPoints : 0;
+        }
+
+        turnPoints += throwGain;
+        diceCount -= usedDice;
+        if (diceCount <= 0) diceCount = 6;
+
+        if (turnPoints < currentLimit) continue;
+        if (turnPoints >= currentLimit * d.riskLimit) return turnPoints;
+        if (Math.random() < d.stopChance || diceCount < 3) return turnPoints;
+    }
+}
+
+// ==========================================
+// 6. POMOCNÉ FUNKCE A UI
+// ==========================================
+function render() {
+    const body = document.getElementById('scoreBody');
+    const lib = document.getElementById('playerLibrary');
+    const playing = players.filter(p => p.active && !p.finished);
+    
+    if (lib) {
+        lib.innerHTML = players.map(p => `
+            <div class="library-item ${p.active ? 'active' : ''} ${p.finished ? 'finished' : ''}">
+                <span onclick="toggleActive(${p.id})" style="cursor:pointer">
+                    ${p.isBot ? '🤖' : '👤'} <b>${p.name}</b>
+                </span>
+                ${p.isBot ? `<button class="diff-btn" onclick="changeBotDifficulty(${p.id})">${p.difficulty.toUpperCase()}</button>` : ''}
+                <span class="edit-btn" onclick="renamePlayer(${p.id})">✏️</span>
+                <span class="edit-btn" onclick="deletePlayer(${p.id})" style="color:red">🗑️</span>
+            </div>
+        `).join('');
+    }
+
+    if (body) {
+        body.innerHTML = "";
+        playing.forEach((p, index) => {
+            const isCurrent = index === activeIndex;
+            if (isCurrent) {
+                const display = document.getElementById('currentPlayerDisplay');
+                if (display) display.innerText = "Na řadě: " + p.name;
+            }
+            const row = document.createElement('tr');
+            if (isCurrent) row.className = "current-turn";
+            row.innerHTML = `<td>${isCurrent ? '➔ ' : ''}${p.name}</td><td>${p.score}</td><td>${p.zeros}/3</td>`;
+            body.appendChild(row);
+        });
+    }
+
+    const panel = document.getElementById('playPanel');
+    if (panel) panel.style.display = playing.length ? 'block' : 'none';
+}
+
+function showFinalResults() {
+    const results = [...players.filter(p => p.active)].sort((a, b) => {
+        if (a.finished && b.finished) return a.finishTime - b.finishTime;
+        if (a.finished) return -1;
+        if (b.finished) return 1;
+        return b.score - a.score;
+    });
+
+    let resultsHtml = results.map((p, i) => `
+        <div style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom:1px solid var(--accent); color: white;">
+            <span>${i + 1}. ${p.isBot ? '🤖' : '👤'} ${p.name}</span>
+            <b>${p.score} b.</b>
+        </div>
+    `).join('');
+
+    const content = document.getElementById('rulesContent');
+    if (content) {
+        content.innerHTML = `<h2 style="color:var(--accent); text-align:center;">🏆 Konečné pořadí</h2>${resultsHtml}
+        <button onclick="resetScores(); closeRules();" style="width:100%; margin-top:20px; padding:10px; background:var(--accent); border:none; color:white; border-radius:5px; cursor:pointer;">Nová hra</button>`;
+        openRules();
+    }
+}
+
+function save() {
+    localStorage.setItem('dice_players', JSON.stringify(players));
+    render();
+}
+
+function resetScores() {
+    players.forEach(p => { p.score = 0; p.zeros = 0; p.finished = false; p.finishTime = null; });
+    activeIndex = 0;
+    save();
+}
+
+function undoLastMove() {
+    if (history.length > 0) {
+        players = history.pop();
+        save();
+    }
+}
+
+async function updateRulesText() {
+    const content = document.getElementById('rulesContent');
+    if (!content) return;
+    try {
+        const response = await fetch('rules.json');
+        const d = await response.json();
+        content.innerHTML = `<b>Bodování:</b><br>• ${d.scoring.singles}<br>• ${d.scoring.sets}<br>• ${d.scoring.straights}<br>• ${d.scoring.kiks}`;
+    } catch (e) { content.innerHTML = "Pravidla se nepodařilo načíst."; }
+}
+
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('diceTheme');
+    const themeLink = document.getElementById('themeLink');
+    if (savedTheme === 'light' && themeLink) themeLink.setAttribute('href', 'style-light.css');
+}
+
+function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
+function openRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'block'; }
+function closeRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'none'; }
+
+// INICIALIZACE
+applySavedTheme();
+render();
