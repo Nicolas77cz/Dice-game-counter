@@ -194,12 +194,12 @@ function processMove(points) {
     } else {
         activeIndex = (activeIndex + (p.finished ? 0 : 1)) % playing.length;
         render();
-        setTimeout(checkBotTurn, 1000); // TADY BYLA CHYBA - FUNKCE MUSÍ EXISTOVAT
+        setTimeout(checkBotTurn, 1000);
     }
 }
 
 // ==========================================
-// 5. BOT LOGIKA (OPRAVENÁ)
+// 5. BOT LOGIKA
 // ==========================================
 function checkBotTurn() {
     const playing = players.filter(p => p.active && !p.finished);
@@ -276,7 +276,40 @@ function simulateBotTurn(bot) {
 }
 
 // ==========================================
-// 6. POMOCNÉ FUNKCE A UI
+// 6. TÉMATA
+// ==========================================
+function toggleTheme() {
+    vibrate();
+    const themeLink = document.getElementById('themeLink');
+    const themeBtn = document.getElementById('themeBtn');
+    
+    if (themeLink.getAttribute('href').includes('dark')) {
+        themeLink.setAttribute('href', 'style-light.css');
+        if (themeBtn) themeBtn.innerText = "🌙 Tmavý režim";
+        localStorage.setItem('diceTheme', 'light');
+    } else {
+        themeLink.setAttribute('href', 'style-dark.css');
+        if (themeBtn) themeBtn.innerText = "☀️ Světlý režim";
+        localStorage.setItem('diceTheme', 'dark');
+    }
+}
+
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('diceTheme') || 'dark';
+    const themeLink = document.getElementById('themeLink');
+    const themeBtn = document.getElementById('themeBtn');
+    
+    if (savedTheme === 'light') {
+        themeLink.setAttribute('href', 'style-light.css');
+        if (themeBtn) themeBtn.innerText = "🌙 Tmavý režim";
+    } else {
+        themeLink.setAttribute('href', 'style-dark.css');
+        if (themeBtn) themeBtn.innerText = "☀️ Světlý režim";
+    }
+}
+
+// ==========================================
+// 7. POMOCNÉ FUNKCE A UI
 // ==========================================
 function render() {
     const body = document.getElementById('scoreBody');
@@ -313,6 +346,22 @@ function render() {
 
     const panel = document.getElementById('playPanel');
     if (panel) panel.style.display = playing.length ? 'block' : 'none';
+    
+    // Synchronizace inputů v nastavení
+    const tInput = document.getElementById('targetScore');
+    const eInput = document.getElementById('entryLimit');
+    const tuInput = document.getElementById('turnLimit');
+    const zCheck = document.getElementById('zilchMode');
+    const sCheck = document.getElementById('syncLimits');
+
+    if (tInput) tInput.value = settings.target;
+    if (eInput) eInput.value = settings.entryLimit;
+    if (tuInput) {
+        tuInput.value = settings.turnLimit;
+        tuInput.disabled = settings.sync;
+    }
+    if (zCheck) zCheck.checked = settings.zilch;
+    if (sCheck) sCheck.checked = settings.sync;
 }
 
 function showFinalResults() {
@@ -362,20 +411,30 @@ async function updateRulesText() {
     try {
         const response = await fetch('rules.json');
         const d = await response.json();
-        content.innerHTML = `<b>Bodování:</b><br>• ${d.scoring.singles}<br>• ${d.scoring.sets}<br>• ${d.scoring.straights}<br>• ${d.scoring.kiks}`;
-    } catch (e) { content.innerHTML = "Pravidla se nepodařilo načíst."; }
-}
-
-function applySavedTheme() {
-    const savedTheme = localStorage.getItem('diceTheme');
-    const themeLink = document.getElementById('themeLink');
-    if (savedTheme === 'light' && themeLink) themeLink.setAttribute('href', 'style-light.css');
+        content.innerHTML = `
+            <div style="margin-bottom:15px; border-bottom:1px solid var(--accent); padding-bottom:10px;">
+                <b style="color:var(--accent);">Bodování:</b><br>
+                • ${d.scoring.singles}<br>• ${d.scoring.sets}<br>• ${d.scoring.straights}<br>• ${d.scoring.kiks}
+            </div>
+            <div style="margin-bottom:15px; border-bottom:1px solid var(--accent); padding-bottom:10px;">
+                <b style="color:var(--accent);">Limity:</b><br>
+                • <b>Vstup (${settings.entryLimit}):</b> ${d.limits_info.entry}<br>
+                • <b>Kolo (${settings.turnLimit}):</b> ${d.limits_info.turn}
+            </div>
+            <div>
+                <b style="color:var(--accent);">Funkce:</b><br>
+                • ${d.features.bot}<br>• ${d.features.management}
+            </div>`;
+    } catch (e) { content.innerHTML = "Pravidla se nepodařilo načíst (zkontrolujte rules.json)."; }
 }
 
 function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
 function openRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'block'; }
 function closeRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'none'; }
 
-// INICIALIZACE
+// ==========================================
+// 8. INICIALIZACE
+// ==========================================
 applySavedTheme();
+updateRulesText();
 render();
