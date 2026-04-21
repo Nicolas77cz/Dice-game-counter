@@ -206,6 +206,10 @@ function processMove(points) {
 // 5. BOT LOGIKA
 // ==========================================
 function checkBotTurn() {
+    // Pokud je otevřené nějaké modální okno (pravidla/výsledky), bot nehraje
+    const modal = document.getElementById('rulesModal');
+    if (modal && modal.style.display === 'block') return;
+
     const playing = players.filter(p => p.active && !p.finished);
     if (playing.length === 0) return;
 
@@ -510,13 +514,16 @@ function undoLastMove() {
         if (playing.length > 0) {
             activeIndex = (activeIndex - 1 + playing.length) % playing.length;
         }
-        
-        // Zrušíme naplánované tahy bota, aby nehrál do vrácené historie
+
+        // Zrušíme všechny rozběhnuté tahy botů (důležité pro stabilitu)
         let id = window.setTimeout(function() {}, 0);
         while (id--) { window.clearTimeout(id); }
-
+        
         vibrate();
-        save();
+        save(); // save v sobě má render()
+
+        // KLÍČOVÝ PŘIDANÝ ŘÁDEK:
+        setTimeout(checkBotTurn, 1000); 
     } else {
         alert("Není se kam vrátit.");
     }
@@ -563,6 +570,9 @@ function nextPlayer() {
         activeIndex = (activeIndex + 1) % playing.length;
         vibrate();
         render();
+
+        // KLÍČOVÝ PŘIDANÝ ŘÁDEK:
+        setTimeout(checkBotTurn, 500); 
     }
 }
 // ==========================================
