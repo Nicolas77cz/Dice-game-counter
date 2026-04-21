@@ -183,9 +183,11 @@ function processMove(points) {
     vibrate();
     save();
 
+    // --- OPRAVENÁ LOGIKA STŘÍDÁNÍ A KONCE HRY ---
     playing = players.filter(p => p.active && !p.finished);
     const totalActiveCount = players.filter(p => p.active).length;
 
+    // Kontrola, zda hra končí
     if ((totalActiveCount > 1 && playing.length <= 1) || (totalActiveCount === 1 && playing.length === 0)) {
         if (playing.length === 1) {
             playing[0].finished = true;
@@ -193,6 +195,7 @@ function processMove(points) {
         }
         showFinalResults();
     } else {
+        // Tady je to "střídání" hráčů - pokud hráč skončil (dohrál do 10k), index se nemění
         activeIndex = (activeIndex + (p.finished ? 0 : 1)) % playing.length;
         render();
         setTimeout(checkBotTurn, 1000);
@@ -403,6 +406,11 @@ function render() {
 }
 
 function showFinalResults() {
+    const content = document.getElementById('rulesContent');
+    const modal = document.getElementById('rulesModal');
+    if (!content || !modal) return;
+
+    // Seřazení výsledků: vítězové podle času dohozu, zbytek podle bodů
     const results = [...players.filter(p => p.active)].sort((a, b) => {
         if (a.finished && b.finished) return a.finishTime - b.finishTime;
         if (a.finished) return -1;
@@ -410,19 +418,35 @@ function showFinalResults() {
         return b.score - a.score;
     });
 
-    let resultsHtml = results.map((p, i) => `
-        <div style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom:1px solid var(--accent); color: white;">
-            <span>${i + 1}. ${p.isBot ? '🤖' : '👤'} ${p.name}</span>
-            <b>${p.score} b.</b>
-        </div>
-    `).join('');
+    // Sestavení HTML tabulky vítězů
+    let resultsHtml = `
+        <h2 style="color:var(--accent); text-align:center; margin-top:0;">🏆 Konečné pořadí</h2>
+        <div style="margin-bottom: 20px;">
+    `;
 
-    const content = document.getElementById('rulesContent');
-    if (content) {
-        content.innerHTML = `<h2 style="color:var(--accent); text-align:center;">🏆 Konečné pořadí</h2>${resultsHtml}
-        <button onclick="resetScores(); closeRules();" style="width:100%; margin-top:20px; padding:10px; background:var(--accent); border:none; color:white; border-radius:5px; cursor:pointer;">Nová hra</button>`;
-        openRules();
-    }
+    results.forEach((p, i) => {
+        const isWinner = i === 0 && p.finished;
+        resultsHtml += `
+            <div style="display:flex; justify-content:space-between; padding: 12px 10px; 
+                        border-bottom:1px solid rgba(255,255,255,0.1); 
+                        background: ${isWinner ? 'rgba(255,215,0,0.1)' : 'transparent'};
+                        color: ${isWinner ? '#ffd700' : 'white'};">
+                <span>${i + 1}. ${p.isBot ? '🤖' : '👤'} ${p.name}</span>
+                <b>${p.score} b.</b>
+            </div>
+        `;
+    });
+
+    resultsHtml += `</div>
+        <button onclick="resetScores(); closeRules();" 
+                style="width:100%; padding:15px; background:var(--accent); border:none; 
+                       color:white; border-radius:5px; font-weight:bold; cursor:pointer;">
+            HRÁT ZNOVU
+        </button>`;
+
+    // ZÁSADNÍ: Přepíšeme obsah a hned otevřeme okno
+    content.innerHTML = resultsHtml;
+    modal.style.display = 'block';
 }
 
 function save() {
@@ -481,7 +505,20 @@ function resetScores() {
 function undoLastMove() {
     if (history.length > 0) {
         players = history.pop();
+        
+        const playing = players.filter(p => p.active && !p.finished);
+        if (playing.length > 0) {
+            activeIndex = (activeIndex - 1 + playing.length) % playing.length;
+        }
+        
+        // Zrušíme naplánované tahy bota, aby nehrál do vrácené historie
+        let id = window.setTimeout(function() {}, 0);
+        while (id--) { window.clearTimeout(id); }
+
+        vibrate();
         save();
+    } else {
+        alert("Není se kam vrátit.");
     }
 }
 
@@ -520,7 +557,14 @@ function openRules() {
     } 
 }
 function closeRules() { const m = document.getElementById('rulesModal'); if(m) m.style.display = 'none'; }
-
+function nextPlayer() {
+    const playing = players.filter(p => p.active && !p.finished);
+    if (playing.length > 1) {
+        activeIndex = (activeIndex + 1) % playing.length;
+        vibrate();
+        render();
+    }
+}
 // ==========================================
 // 8. INICIALIZACE
 // ==========================================
